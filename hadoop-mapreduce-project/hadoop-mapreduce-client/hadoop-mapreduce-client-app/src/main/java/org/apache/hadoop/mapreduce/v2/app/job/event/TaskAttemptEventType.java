@@ -44,6 +44,7 @@ public enum TaskAttemptEventType {
   TA_DIAGNOSTICS_UPDATE,
   TA_COMMIT_PENDING, 
   TA_DONE,
+  TA_PREDONE,
   TA_FAILMSG,
   TA_UPDATE,
   TA_TIMED_OUT,

@@ -244,6 +244,21 @@ public class TaskAttemptListenerImpl extends CompositeService
   }
 
   @Override
+  public void preDone(TaskAttemptID taskAttemptID) throws IOException {
+    LOG.info("Done acknowledgement from " + taskAttemptID.toString());
+
+    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
+        TypeConverter.toYarn(taskAttemptID);
+
+    // taskHeartbeatHandler.progressing(attemptID);
+
+    LOG.info("wuchunghsuan: handle PreDone TaskAttemptEvent.");
+
+    context.getEventHandler().handle(
+        new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_PREDONE));
+  }
+
+  @Override
   public void fatalError(TaskAttemptID taskAttemptID, String msg)
       throws IOException {
     // This happens only in Child and in the Task.

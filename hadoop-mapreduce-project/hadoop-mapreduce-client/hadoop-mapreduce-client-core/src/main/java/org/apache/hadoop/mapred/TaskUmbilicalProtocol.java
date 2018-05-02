@@ -115,6 +115,8 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
    * @param taskid task's id
    */
   void done(TaskAttemptID taskid) throws IOException;
+
+  void preDone(TaskAttemptID taskid) throws IOException;
   
   /** 
    * Report that the task is complete, but its commit is pending.

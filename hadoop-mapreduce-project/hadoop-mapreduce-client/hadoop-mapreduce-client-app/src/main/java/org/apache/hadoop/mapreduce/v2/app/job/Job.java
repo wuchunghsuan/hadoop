@@ -92,6 +92,9 @@ public interface Job {
   TaskCompletionEvent[]
       getMapAttemptCompletionEvents(int startIndex, int maxEvents);
 
+  TaskCompletionEvent[]
+      getMapAttemptPreDoneEvents(int startIndex, int maxEvents);
+
   /**
    * @return information for MR AppMasters (previously failed and current)
    */

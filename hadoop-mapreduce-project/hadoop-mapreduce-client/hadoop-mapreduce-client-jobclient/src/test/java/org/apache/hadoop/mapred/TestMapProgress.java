@@ -85,6 +85,10 @@ public class TestMapProgress extends TestCase {
       LOG.info("Task " + taskid + " reporting done.");
     }
 
+    public void preDone(TaskAttemptID taskid) throws IOException {
+      LOG.info("Task " + taskid + " reporting predone.");
+    }
+
     public void fsError(TaskAttemptID taskId, String message) throws IOException {
       LOG.info("Task " + taskId + " reporting file system error: " + message);
     }

@@ -1178,6 +1178,23 @@ abstract public class Task implements Writable, Configurable {
       }
     }
   }
+  
+  public void sendPreDone(TaskUmbilicalProtocol umbilical) throws IOException {
+    int retries = MAX_RETRIES;
+    while (true) {
+      try {
+        umbilical.preDone(getTaskID());
+        LOG.info("wuchunghsuan: Task '" + taskId + "' preDone.");
+        return;
+      } catch (IOException ie) {
+        LOG.warn("Failure signalling completion: " + 
+                 StringUtils.stringifyException(ie));
+        if (--retries == 0) {
+          throw ie;
+        }
+      }
+    }
+  }
 
   private void commit(TaskUmbilicalProtocol umbilical,
                       TaskReporter reporter,

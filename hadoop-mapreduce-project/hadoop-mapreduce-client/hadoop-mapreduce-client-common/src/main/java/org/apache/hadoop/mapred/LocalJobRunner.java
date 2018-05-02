@@ -681,6 +681,10 @@ public class LocalJobRunner implements ClientProtocol {
       }
     }
 
+    public void preDone(TaskAttemptID taskId) throws IOException {
+      // Do Nothing.
+    }
+
     public synchronized void fsError(TaskAttemptID taskId, String message) 
     throws IOException {
       LOG.fatal("FSError: "+ message + "from task: " + taskId);

@@ -67,6 +67,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobMapTaskRescheduledEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptCompletedEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptPreDoneEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
@@ -189,6 +190,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     .addTransition(TaskStateInternal.RUNNING, TaskStateInternal.SUCCEEDED, 
         TaskEventType.T_ATTEMPT_SUCCEEDED,
         new AttemptSucceededTransition())
+    .addTransition(TaskStateInternal.RUNNING, TaskStateInternal.RUNNING, 
+        TaskEventType.T_ATTEMPT_PRESUCCEEDED,
+        new AttemptPreSucceededTransition())
     .addTransition(TaskStateInternal.RUNNING, TaskStateInternal.RUNNING, 
         TaskEventType.T_ATTEMPT_KILLED,
         ATTEMPT_KILLED_TRANSITION)
@@ -703,6 +707,30 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     }
   }
 
+  public void handleTaskAttemptPreDone(TaskAttemptId attemptId){
+    TaskAttempt attempt = attempts.get(attemptId);
+    //raise the completion event only if the container is assigned
+    // to nextAttemptNumber
+    if (attempt.getNodeHttpAddress() != null) {
+      TaskAttemptCompletionEvent tce = recordFactory
+          .newRecordInstance(TaskAttemptCompletionEvent.class);
+      tce.setEventId(-1);
+      String scheme = (encryptedShuffle) ? "https://" : "http://";
+      tce.setMapOutputServerAddress(StringInterner.weakIntern(scheme
+         + attempt.getNodeHttpAddress().split(":")[0] + ":"
+         + attempt.getShufflePort()));
+      tce.setStatus(TaskAttemptCompletionEventStatus.SUCCEEDED);
+      tce.setAttemptId(attempt.getID());
+      int runTime = 0;
+      if (attempt.getFinishTime() != 0 && attempt.getLaunchTime() !=0)
+        runTime = (int)(attempt.getFinishTime() - attempt.getLaunchTime());
+      tce.setAttemptRunTime(runTime);
+
+      LOG.info("wuchunghsuan: handleTaskAttemptPreDone.");
+      eventHandler.handle(new JobTaskAttemptPreDoneEvent(tce));
+    }
+  }
+
   private void sendTaskStartedEvent() {
     TaskStartedEvent tse = new TaskStartedEvent(
         TypeConverter.fromYarn(taskId), getLaunchTime(),
@@ -959,6 +987,32 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         }
       }
       task.finished(TaskStateInternal.SUCCEEDED);
+    }
+  }
+
+  private static class AttemptPreSucceededTransition 
+      implements SingleArcTransition<TaskImpl, TaskEvent> {
+    @Override
+    public void transition(TaskImpl task, TaskEvent event) {
+      TaskTAttemptEvent taskTAttemptEvent = (TaskTAttemptEvent) event;
+      TaskAttemptId taskAttemptId = taskTAttemptEvent.getTaskAttemptID();
+      task.handleTaskAttemptPreDone(taskAttemptId);
+      // task.finishedAttempts.add(taskAttemptId);
+      // task.inProgressAttempts.remove(taskAttemptId);
+      // task.successfulAttempt = taskAttemptId;
+      // task.sendTaskSucceededEvents();
+      // for (TaskAttempt attempt : task.attempts.values()) {
+      //   if (attempt.getID() != task.successfulAttempt &&
+      //       // This is okay because it can only talk us out of sending a
+      //       //  TA_KILL message to an attempt that doesn't need one for
+      //       //  other reasons.
+      //       !attempt.isFinished()) {
+      //     LOG.info("Issuing kill to other attempt " + attempt.getID());
+      //     task.eventHandler.handle(new TaskAttemptKillEvent(attempt.getID(),
+      //         SPECULATION + task.successfulAttempt + " succeeded first!"));
+      //   }
+      // }
+      // task.finished(TaskStateInternal.SUCCEEDED);
     }
   }
 

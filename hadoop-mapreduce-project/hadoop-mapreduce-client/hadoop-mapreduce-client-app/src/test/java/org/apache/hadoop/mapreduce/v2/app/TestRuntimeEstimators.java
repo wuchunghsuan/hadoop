@@ -467,6 +467,12 @@ public class TestRuntimeEstimators {
     }
 
     @Override
+    public TaskCompletionEvent[]
+            getMapAttemptPreDoneEvents(int startIndex, int maxEvents) {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
     public String getName() {
       throw new UnsupportedOperationException("Not supported yet.");
     }

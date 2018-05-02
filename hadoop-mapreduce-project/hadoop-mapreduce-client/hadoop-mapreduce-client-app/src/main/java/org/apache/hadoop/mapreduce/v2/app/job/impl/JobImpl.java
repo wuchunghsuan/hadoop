@@ -100,6 +100,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobFinishEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobSetupFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobStartEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptCompletedEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptPreDoneEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptFetchFailureEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobUpdatedNodesEvent;
@@ -217,6 +218,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private int allowedReduceFailuresPercent = 0;
   private List<TaskAttemptCompletionEvent> taskAttemptCompletionEvents;
   private List<TaskCompletionEvent> mapAttemptCompletionEvents;
+  private List<TaskCompletionEvent> mapAttemptPreDoneEvents;
   private List<Integer> taskCompletionIdxToMapCompletionIdx;
   private final List<String> diagnostics = new ArrayList<String>();
   
@@ -324,6 +326,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobStateInternal.RUNNING, JobStateInternal.RUNNING,
               JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
               TASK_ATTEMPT_COMPLETED_EVENT_TRANSITION)
+          .addTransition(JobStateInternal.RUNNING, JobStateInternal.RUNNING,
+              JobEventType.JOB_TASK_ATTEMPT_PREDONE,
+              new TaskAttemptPreDoneEventTransition())
           .addTransition
               (JobStateInternal.RUNNING,
               EnumSet.of(JobStateInternal.RUNNING,
@@ -845,6 +850,24 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         int actualMax = Math.min(maxEvents,
             (mapAttemptCompletionEvents.size() - startIndex));
         events = mapAttemptCompletionEvents.subList(startIndex,
+            actualMax + startIndex).toArray(events);
+      }
+      return events;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public TaskCompletionEvent[] getMapAttemptPreDoneEvents(
+      int startIndex, int maxEvents) {
+    TaskCompletionEvent[] events = EMPTY_TASK_COMPLETION_EVENTS;
+    readLock.lock();
+    try {
+      if (mapAttemptPreDoneEvents.size() > startIndex) {
+        int actualMax = Math.min(maxEvents,
+            (mapAttemptPreDoneEvents.size() - startIndex));
+        events = mapAttemptPreDoneEvents.subList(startIndex,
             actualMax + startIndex).toArray(events);
       }
       return events;
@@ -1480,6 +1503,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.numMapTasks + job.numReduceTasks + 10);
         job.mapAttemptCompletionEvents =
             new ArrayList<TaskCompletionEvent>(job.numMapTasks + 10);
+        job.mapAttemptPreDoneEvents =
+            new ArrayList<TaskCompletionEvent>(job.numMapTasks + 10);
         job.taskCompletionIdxToMapCompletionIdx = new ArrayList<Integer>(
             job.numMapTasks + job.numReduceTasks + 10);
 
@@ -1833,6 +1858,22 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             new TaskEvent(task.getID(), TaskEventType.T_KILL));
       }
       job.metrics.endRunningJob(job);
+    }
+  }
+
+  private static class TaskAttemptPreDoneEventTransition implements
+      SingleArcTransition<JobImpl, JobEvent> {
+    @Override
+    public void transition(JobImpl job, JobEvent event) {
+      TaskAttemptCompletionEvent tce = 
+        ((JobTaskAttemptPreDoneEvent) event).getCompletionEvent();
+      if (TaskType.MAP.equals(tce.getAttemptId().getTaskId().getTaskType())) {
+        // we track map completions separately from task completions because
+        // - getMapAttemptCompletionEvents uses index ranges specific to maps
+        // - type converting the same events over and over is expensive
+        LOG.info("wuchunghsuan: Add mapAttemptPreDoneEvents successfully.");
+        job.mapAttemptPreDoneEvents.add(TypeConverter.fromYarn(tce));
+      }
     }
   }
 

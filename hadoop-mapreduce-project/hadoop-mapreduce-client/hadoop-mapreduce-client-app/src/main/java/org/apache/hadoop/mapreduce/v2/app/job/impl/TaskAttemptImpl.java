@@ -281,6 +281,10 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptStateInternal.RUNNING,
          TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_DONE, CLEANUP_CONTAINER_TRANSITION)
+    // For scache-wu pre-fetch.
+    .addTransition(TaskAttemptStateInternal.RUNNING,
+         TaskAttemptStateInternal.RUNNING,
+         TaskAttemptEventType.TA_PREDONE, new PreSucceededTransition())
      // If commit is required, task goes through commit pending state.
      .addTransition(TaskAttemptStateInternal.RUNNING,
          TaskAttemptStateInternal.COMMIT_PENDING,
@@ -1727,6 +1731,27 @@ public abstract class TaskAttemptImpl implements
           (taskAttempt.reportedStatus, taskAttempt.clock.getTime()));
    }
   }
+
+  private static class PreSucceededTransition implements
+      SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void transition(TaskAttemptImpl taskAttempt, 
+        TaskAttemptEvent event) {
+      //set the finish time
+      // taskAttempt.setFinishTime();
+      // taskAttempt.eventHandler.handle(
+      //     createJobCounterUpdateEventTASucceeded(taskAttempt));
+      // taskAttempt.logAttemptFinishedEvent(TaskAttemptStateInternal.SUCCEEDED);
+      LOG.info("wuchunghsuan: preSucceeded transition in taskAttempt.");
+      taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
+          taskAttempt.attemptId,
+          TaskEventType.T_ATTEMPT_PRESUCCEEDED));
+      // taskAttempt.eventHandler.handle
+      // (new SpeculatorEvent
+      //     (taskAttempt.reportedStatus, taskAttempt.clock.getTime()));
+    }
+}
 
   private static class FailedTransition implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {

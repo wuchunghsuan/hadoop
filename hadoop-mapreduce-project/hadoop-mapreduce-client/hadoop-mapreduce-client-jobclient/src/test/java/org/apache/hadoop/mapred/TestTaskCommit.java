@@ -113,6 +113,11 @@ public class TestTaskCommit extends HadoopTestCase {
     }
 
     @Override
+    public void preDone(TaskAttemptID taskid) throws IOException {
+      // taskDone = true;
+    }
+
+    @Override
     public void fatalError(TaskAttemptID taskId, String message)
         throws IOException { }
 

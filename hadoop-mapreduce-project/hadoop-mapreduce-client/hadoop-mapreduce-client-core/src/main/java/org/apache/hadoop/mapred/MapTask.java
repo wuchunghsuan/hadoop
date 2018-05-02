@@ -342,7 +342,8 @@ public class MapTask extends Task {
     } else {
       runOldMapper(job, splitMetaInfo, umbilical, reporter);
     }
-    done(umbilical, reporter);
+    // done(umbilical, reporter);
+    sendPreDone(umbilical);
   }
 
   public Progress getSortPhase() {

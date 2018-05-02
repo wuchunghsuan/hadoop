@@ -206,6 +206,12 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
         mapCompletionEvents, startIndex, maxEvents));
   }
 
+  @Override
+  public synchronized TaskCompletionEvent[] getMapAttemptPreDoneEvents(
+      int startIndex, int maxEvents) {
+    return null;
+  }
+
   private static TaskAttemptCompletionEvent[] getAttemptCompletionEvents(
       List<TaskAttemptCompletionEvent> eventList,
       int startIndex, int maxEvents) {
