@@ -26,18 +26,18 @@ import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
-class EventFetcher<K,V> extends Thread {
+public class EventFetcher<K,V> extends Thread {
   private static final long SLEEP_TIME = 1000;
   private static final int MAX_RETRIES = 10;
   private static final int RETRY_PERIOD = 5000;
   private static final Log LOG = LogFactory.getLog(EventFetcher.class);
 
-  private final TaskAttemptID reduce;
-  private final TaskUmbilicalProtocol umbilical;
-  private final ShuffleScheduler<K,V> scheduler;
+  private TaskAttemptID reduce;
+  private TaskUmbilicalProtocol umbilical;
+  private ShuffleScheduler<K,V> scheduler;
   private int fromEventIdx = 0;
-  private final int maxEventsToFetch;
-  private final ExceptionReporter exceptionReporter;
+  private int maxEventsToFetch;
+  private ExceptionReporter exceptionReporter;
   
   private volatile boolean stopped = false;
   
@@ -53,6 +53,21 @@ class EventFetcher<K,V> extends Thread {
     this.scheduler = scheduler;
     exceptionReporter = reporter;
     this.maxEventsToFetch = maxEventsToFetch;
+  }
+
+  public EventFetcher(TaskAttemptID reduce,
+                      TaskUmbilicalProtocol umbilical,
+                      ShuffleScheduler<K,V> scheduler,
+                      // ExceptionReporter reporter,
+                      int maxEventsToFetch) {
+    setName("EventFetcher for fetching Map Completion Events");
+    setDaemon(true);    
+    this.reduce = reduce;
+    this.umbilical = umbilical;
+    this.scheduler = scheduler;
+    // exceptionReporter = reporter;
+    this.maxEventsToFetch = maxEventsToFetch;
+
   }
 
   @Override
@@ -126,6 +141,8 @@ class EventFetcher<K,V> extends Thread {
       events = update.getMapTaskCompletionEvents();
       LOG.debug("Got " + events.length + " map completion events from " +
                fromEventIdx);
+
+      LOG.info("wuchunghsuan: Got " + events.length + " map completion events from " + fromEventIdx);
 
       assert !update.shouldReset() : "Unexpected legacy state";
 

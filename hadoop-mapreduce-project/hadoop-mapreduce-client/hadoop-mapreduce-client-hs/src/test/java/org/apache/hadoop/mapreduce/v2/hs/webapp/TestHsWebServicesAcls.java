@@ -405,6 +405,12 @@ public class TestHsWebServicesAcls {
     }
 
     @Override
+    public TaskCompletionEvent[] getMapAttemptPreDoneEvents(
+        int startIndex, int maxEvents) {
+      return mockJob.getMapAttemptPreDoneEvents(startIndex, maxEvents);
+    }
+
+    @Override
     public List<AMInfo> getAMInfos() {
       return mockJob.getAMInfos();
     }

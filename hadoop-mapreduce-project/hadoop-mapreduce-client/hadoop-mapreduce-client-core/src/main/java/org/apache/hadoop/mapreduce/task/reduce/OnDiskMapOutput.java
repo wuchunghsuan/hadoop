@@ -81,6 +81,8 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
     tmpOutputPath = getTempPath(outputPath, fetcher);
     disk = CryptoUtils.wrapIfNecessary(conf, fs.create(tmpOutputPath));
     this.conf = conf;
+
+    LOG.info("wuchunghsuan: Init OnDiskMapOutput tmpOutputPath -> " + tmpOutputPath + " outputPath -> " + outputPath);
   }
 
   @VisibleForTesting

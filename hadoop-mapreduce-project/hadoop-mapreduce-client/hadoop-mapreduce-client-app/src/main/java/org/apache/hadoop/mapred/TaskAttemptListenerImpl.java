@@ -250,7 +250,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
         TypeConverter.toYarn(taskAttemptID);
 
-    // taskHeartbeatHandler.progressing(attemptID);
+    taskHeartbeatHandler.progressing(attemptID);
 
     LOG.info("wuchunghsuan: handle PreDone TaskAttemptEvent.");
 
@@ -294,15 +294,18 @@ public class TaskAttemptListenerImpl extends CompositeService
   public MapTaskCompletionEventsUpdate getMapCompletionEvents(
       JobID jobIdentifier, int startIndex, int maxEvents,
       TaskAttemptID taskAttemptID) throws IOException {
-    LOG.info("MapCompletionEvents request from " + taskAttemptID.toString()
+    LOG.info("wuchunghsuan: MapCompletionEvents request from " + taskAttemptID.toString()
         + ". startIndex " + startIndex + " maxEvents " + maxEvents);
 
     // TODO: shouldReset is never used. See TT. Ask for Removal.
     boolean shouldReset = false;
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
       TypeConverter.toYarn(taskAttemptID);
+    // TaskCompletionEvent[] events =
+    //     context.getJob(attemptID.getTaskId().getJobId()).getMapAttemptCompletionEvents(
+    //         startIndex, maxEvents);
     TaskCompletionEvent[] events =
-        context.getJob(attemptID.getTaskId().getJobId()).getMapAttemptCompletionEvents(
+        context.getJob(attemptID.getTaskId().getJobId()).getMapAttemptPreDoneEvents(
             startIndex, maxEvents);
 
     taskHeartbeatHandler.progressing(attemptID);

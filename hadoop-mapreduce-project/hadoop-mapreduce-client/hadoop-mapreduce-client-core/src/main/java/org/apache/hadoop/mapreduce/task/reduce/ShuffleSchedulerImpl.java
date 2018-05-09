@@ -142,6 +142,44 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
         MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_HOST_FAILURES);
   }
 
+  public ShuffleSchedulerImpl(JobConf job, TaskStatus status,
+                          TaskAttemptID reduceId,
+                          // ExceptionReporter reporter,
+                          Progress progress,
+                          Counters.Counter shuffledMapsCounter,
+                          Counters.Counter reduceShuffleBytes,
+                          Counters.Counter failedShuffleCounter) {
+    totalMaps = job.getNumMapTasks();
+    abortFailureLimit = Math.max(30, totalMaps / 10);
+    copyTimeTracker = new CopyTimeTracker();
+    remainingMaps = totalMaps;
+    finishedMaps = new boolean[remainingMaps];
+    
+    // this.reporter = reporter;
+    this.reporter = null;
+
+    this.status = status;
+    this.reduceId = reduceId;
+    this.progress = progress;
+    this.shuffledMapsCounter = shuffledMapsCounter;
+    this.reduceShuffleBytes = reduceShuffleBytes;
+    this.failedShuffleCounter = failedShuffleCounter;
+    this.startTime = Time.monotonicNow();
+    lastProgressTime = startTime;
+    referee.start();
+    this.maxFailedUniqueFetches = Math.min(totalMaps, 5);
+    this.maxFetchFailuresBeforeReporting = job.getInt(
+        MRJobConfig.SHUFFLE_FETCH_FAILURES, REPORT_FAILURE_LIMIT);
+    this.reportReadErrorImmediately = job.getBoolean(
+        MRJobConfig.SHUFFLE_NOTIFY_READERROR, true);
+
+    this.maxDelay = job.getLong(MRJobConfig.MAX_SHUFFLE_FETCH_RETRY_DELAY,
+        MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_RETRY_DELAY);
+    this.maxHostFailures = job.getInt(
+        MRJobConfig.MAX_SHUFFLE_FETCH_HOST_FAILURES,
+        MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_HOST_FAILURES);
+  }
+
   @Override
   public void resolve(TaskCompletionEvent event) {
     switch (event.getTaskStatus()) {

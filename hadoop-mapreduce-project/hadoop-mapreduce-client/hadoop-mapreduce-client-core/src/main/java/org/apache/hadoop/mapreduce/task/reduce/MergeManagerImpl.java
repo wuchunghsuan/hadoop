@@ -262,10 +262,12 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
                                              long requestedSize,
                                              int fetcher
                                              ) throws IOException {
-    if (requestedSize > maxSingleShuffleLimit) {
-      LOG.info(mapId + ": Shuffling to disk since " + requestedSize + 
-               " is greater than maxSingleShuffleLimit (" + 
-               maxSingleShuffleLimit + ")");
+    // if (requestedSize > maxSingleShuffleLimit) {
+    if (true) {
+      // LOG.info(mapId + ": Shuffling to disk since " + requestedSize + 
+      //          " is greater than maxSingleShuffleLimit (" + 
+      //          maxSingleShuffleLimit + ")");
+      LOG.info("wuchunghsuan: Force to use OnDiskMapOutput.");
       return new OnDiskMapOutput<K,V>(mapId, reduceId, this, requestedSize,
                                       jobConf, mapOutputFile, fetcher, true);
     }

@@ -61,6 +61,12 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.task.reduce.EventFetcher;
+import org.apache.hadoop.mapreduce.task.reduce.Fetcher;
+import org.apache.hadoop.mapreduce.task.reduce.ShuffleSchedulerImpl;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManager;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl;
+import org.apache.hadoop.mapreduce.task.reduce.ShuffleClientMetrics;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.mapreduce.lib.map.WrappedMapper;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter;
@@ -91,6 +97,7 @@ public class MapTask extends Task {
 
   private Progress mapPhase;
   private Progress sortPhase;
+  private Progress copyPhase;
   
   {   // set phase for this task
     setPhase(TaskStatus.Phase.MAP); 
@@ -314,8 +321,12 @@ public class MapTask extends Task {
       } else {
         // If there are reducers then the entire attempt's progress will be 
         // split between the map phase (67%) and the sort phase (33%).
-        mapPhase = getProgress().addPhase("map", 0.667f);
+        // mapPhase = getProgress().addPhase("map", 0.667f);
+        mapPhase = getProgress().addPhase("map", 0.333f);
         sortPhase  = getProgress().addPhase("sort", 0.333f);
+
+        // wuchunghsuan: add copyPhase
+        copyPhase = getProgress().addPhase("sort", 0.333f);
       }
     }
     TaskReporter reporter = startReporter(umbilical);
@@ -344,10 +355,84 @@ public class MapTask extends Task {
     }
     // done(umbilical, reporter);
     sendPreDone(umbilical);
+
+    // Scheduler
+    ShuffleSchedulerImpl<Object, Object> scheduler = new ShuffleSchedulerImpl<Object, Object>(job, taskStatus, getTaskID(),
+        copyPhase, 
+        getCounters().findCounter(TaskCounter.SHUFFLED_MAPS),
+        getCounters().findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES), 
+        getCounters().findCounter(FileOutputFormatCounter.BYTES_WRITTEN));
+    // EventFetcher
+    EventFetcher<Object, Object> eventFetcher = new EventFetcher<Object, Object>(getTaskID(), umbilical, scheduler, 1000);
+    eventFetcher.start();
+
+    // Merger
+    CompressionCodec codec = initCodec();
+    CombineOutputCollector combineCollector = 
+        (null != conf.getCombinerClass()) ? 
+        new CombineOutputCollector(reduceCombineOutputCounter, reporter, conf) : null;
+
+    MergeManager<Object, Object> merger = new MergeManagerImpl<Object, Object>(getTaskID(), job, FileSystem.getLocal(job),
+        super.lDirAlloc, reporter, codec,
+        conf.getCombinerClass(), combineCollector, 
+        spilledRecordsCounter,
+        getCounters().findCounter(TaskCounter.COMBINE_INPUT_RECORDS),
+        mergedMapOutputsCounter, null, copyPhase,
+        getMapOutputFile());
+
+    // Fetcher
+    ShuffleClientMetrics metrics = new ShuffleClientMetrics(getTaskID(), job);
+    Fetcher<Object, Object> fetcher = new Fetcher<Object, Object>(job, getTaskID(), scheduler, merger, 
+                                       reporter, metrics, null, 
+                                       this.getShuffleSecret());
+    fetcher.start();
+
+    while (!scheduler.waitUntilDone(2000)) {
+      reporter.progress();
+      LOG.info("wuchunghsuan: wait scheduler done.");
+    }
+
+    // Stop the event-fetcher thread
+    eventFetcher.shutDown();
+    
+    // Stop the map-output fetcher threads
+    fetcher.shutDown();
+
+    
+    // stop the scheduler
+    scheduler.close();
+
+    copyPhase.complete(); // copy is already complete
+    statusUpdate(umbilical);
+
+    RawKeyValueIterator kvIter = null;
+    try {
+      kvIter = merger.close();
+    } catch (Throwable e) {
+      LOG.info("wuchunghsuan: final merge error -> " + e.getMessage());
+    }
+
+    while(true) {
+      LOG.info("wuchunghsuan: wait here.");
+      Thread.sleep(1000);
+    }
   }
 
   public Progress getSortPhase() {
     return sortPhase;
+  }
+
+  private Counters.Counter reduceCombineOutputCounter =
+    getCounters().findCounter(TaskCounter.COMBINE_OUTPUT_RECORDS);
+  private CompressionCodec initCodec() {
+    // check if map-outputs are to be compressed
+    if (conf.getCompressMapOutput()) {
+      Class<? extends CompressionCodec> codecClass =
+        conf.getMapOutputCompressorClass(DefaultCodec.class);
+      return ReflectionUtils.newInstance(codecClass, conf);
+    } 
+
+    return null;
   }
 
  @SuppressWarnings("unchecked")

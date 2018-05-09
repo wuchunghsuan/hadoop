@@ -39,7 +39,7 @@ public class ShuffleClientMetrics implements Updater {
   private int numThreadsBusy = 0;
   private final int numCopiers;
   
-  ShuffleClientMetrics(TaskAttemptID reduceId, JobConf jobConf) {
+  public ShuffleClientMetrics(TaskAttemptID reduceId, JobConf jobConf) {
     this.numCopiers = jobConf.getInt(MRJobConfig.SHUFFLE_PARALLEL_COPIES, 5);
 
     MetricsContext metricsContext = MetricsUtil.getContext("mapred");
