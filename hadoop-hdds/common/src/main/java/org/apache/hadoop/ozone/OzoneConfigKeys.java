@@ -243,7 +243,9 @@ public final class OzoneConfigKeys {
 
   public static final String HDDS_DATANODE_PLUGINS_KEY =
       "hdds.datanode.plugins";
-
+  public static final String OZONE_SECURITY_ENABLED_KEY = "ozone.security.enabled";
+  public static final String OZONE_SYSTEM_TAGS_KEY = "ozone.system.tags";
+  public static final boolean OZONE_SECURITY_ENABLED_DEFAULT = false;
   /**
    * There is no need to instantiate this class.
    */
