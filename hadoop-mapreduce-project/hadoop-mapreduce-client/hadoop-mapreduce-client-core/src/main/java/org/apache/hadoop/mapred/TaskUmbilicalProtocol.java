@@ -19,7 +19,9 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -117,6 +119,8 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
   void done(TaskAttemptID taskid) throws IOException;
 
   void preDone(TaskAttemptID taskid) throws IOException;
+
+  void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException;
   
   /** 
    * Report that the task is complete, but its commit is pending.
@@ -163,4 +167,5 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
                                                        TaskAttemptID id) 
   throws IOException;
 
+  String[] getCAPaths(TaskAttemptID id) throws IOException;
 }

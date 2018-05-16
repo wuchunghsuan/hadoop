@@ -201,6 +201,7 @@ public class Fetcher<K,V> extends Thread {
     } catch (InterruptedException ie) {
       return;
     } catch (Throwable t) {
+      LOG.info("wuchunghsuan: uncaught exception -> " + t.toString());
       exceptionReporter.reportException(t);
     }
   }

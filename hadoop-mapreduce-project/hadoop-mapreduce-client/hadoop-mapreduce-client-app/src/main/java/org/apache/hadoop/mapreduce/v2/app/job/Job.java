@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.job;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -94,6 +96,10 @@ public interface Job {
 
   TaskCompletionEvent[]
       getMapAttemptPreDoneEvents(int startIndex, int maxEvents);
+
+  ArrayList<CompressAwarePath> getPreFetchPaths(String host);
+
+  void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths);
 
   /**
    * @return information for MR AppMasters (previously failed and current)

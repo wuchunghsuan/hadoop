@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.task.reduce.MapHost.State;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Time;
 
@@ -74,6 +75,8 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   private Map<String, MapHost> mapLocations = new HashMap<String, MapHost>();
   private Set<MapHost> pendingHosts = new HashSet<MapHost>();
   private Set<TaskAttemptID> obsoleteMaps = new HashSet<TaskAttemptID>();
+
+  private ArrayList<CompressAwarePath> preFetchPaths = new ArrayList<CompressAwarePath>();
 
   private final TaskAttemptID reduceId;
   private final Random random = new Random();
@@ -154,7 +157,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     copyTimeTracker = new CopyTimeTracker();
     remainingMaps = totalMaps;
     finishedMaps = new boolean[remainingMaps];
-    
+
     // this.reporter = reporter;
     this.reporter = null;
 
@@ -219,6 +222,10 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     return u;
   }
 
+  public ArrayList<CompressAwarePath> getPreFetchPaths() {
+    return this.preFetchPaths;
+  }
+
   public synchronized void copySucceeded(TaskAttemptID mapId,
                                          MapHost host,
                                          long bytes,
@@ -232,6 +239,17 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
 
     if (!finishedMaps[mapIndex]) {
       output.commit();
+
+      CompressAwarePath path = output.getPath();
+
+      if(path != null){
+        this.preFetchPaths.add(path);
+        LOG.info("wuchunghsuan: Add path -> " + path.toString());
+      }
+      else{
+        LOG.info("wuchunghsuan: Path is null.");
+      }
+      
       finishedMaps[mapIndex] = true;
       shuffledMapsCounter.increment(1);
       if (--remainingMaps == 0) {

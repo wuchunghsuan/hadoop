@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -28,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -59,6 +61,16 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
     jobReport.setJobState(getState());
   }
   
+  @Override
+  public ArrayList<CompressAwarePath> getPreFetchPaths(String host) {
+    return null;
+  }
+
+  @Override
+  public void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths) {
+
+  }
+
   @Override
   public JobId getID() {
 //    return jobIndexInfo.getJobId();

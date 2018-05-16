@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 
 import junit.framework.TestCase;
 
@@ -87,6 +88,14 @@ public class TestMapProgress extends TestCase {
 
     public void preDone(TaskAttemptID taskid) throws IOException {
       LOG.info("Task " + taskid + " reporting predone.");
+    }
+
+    public void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException {
+      LOG.info("Task " + taskAttemptID + " reporting sendPreFetchPath.");
+    }
+
+    public String[] getCAPaths(TaskAttemptID taskAttemptID) throws IOException {
+      return null;
     }
 
     public void fsError(TaskAttemptID taskId, String message) throws IOException {

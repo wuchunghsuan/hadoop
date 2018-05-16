@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
@@ -43,6 +44,7 @@ import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -290,6 +292,15 @@ public class TestHsWebServicesAcls {
       this.jobAcls = new HashMap<JobACL, AccessControlList>();
       this.jobAcls.put(JobACL.VIEW_JOB, viewAcl);
       this.aclsMgr = new JobACLsManager(conf); 
+    }
+    @Override
+    public ArrayList<CompressAwarePath> getPreFetchPaths(String host) {
+      return null;
+    }
+
+    @Override
+    public void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths) {
+
     }
 
     @Override

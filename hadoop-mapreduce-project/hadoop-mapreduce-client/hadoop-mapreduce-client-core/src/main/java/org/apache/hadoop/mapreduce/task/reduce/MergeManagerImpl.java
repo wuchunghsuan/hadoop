@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.mapreduce.task.reduce;
 
+import java.io.DataInput;  
+import java.io.DataOutput;  
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.hadoop.io.Writable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -37,6 +40,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.IFile;
@@ -829,7 +833,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
   
   }
 
-  static class CompressAwarePath extends Path {
+  public static class CompressAwarePath extends Path {
     private long rawDataLength;
     private long compressedSize;
 

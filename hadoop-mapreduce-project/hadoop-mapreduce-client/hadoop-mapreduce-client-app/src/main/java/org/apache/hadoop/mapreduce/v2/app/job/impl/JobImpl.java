@@ -71,6 +71,7 @@ import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -227,6 +228,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     new HashMap<TaskId, Integer>();
   private final Map<TaskAttemptId, Integer> fetchFailuresMapping = 
     new HashMap<TaskAttemptId, Integer>();
+
+  private Map<String, ArrayList<CompressAwarePath> > preFetchPath =
+    new HashMap<String, ArrayList<CompressAwarePath> >();
 
   private static final DiagnosticsUpdateTransition
       DIAGNOSTIC_UPDATE_TRANSITION = new DiagnosticsUpdateTransition();
@@ -731,6 +735,16 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
   protected StateMachine<JobStateInternal, JobEventType, JobEvent> getStateMachine() {
     return stateMachine;
+  }
+
+  @Override
+  public ArrayList<CompressAwarePath> getPreFetchPaths(String host) {
+    return this.preFetchPath.get(host);
+  }
+
+  @Override
+  public void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths) {
+    this.preFetchPath.put(host, paths);
   }
 
   @Override
@@ -1873,6 +1887,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         // - type converting the same events over and over is expensive
         LOG.info("wuchunghsuan: Add mapAttemptPreDoneEvents successfully.");
         job.mapAttemptPreDoneEvents.add(TypeConverter.fromYarn(tce));
+        // job.mapAttemptCompletionEvents.add(TypeConverter.fromYarn(tce));
       }
     }
   }

@@ -24,6 +24,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
@@ -64,6 +65,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.task.reduce.EventFetcher;
 import org.apache.hadoop.mapreduce.task.reduce.Fetcher;
 import org.apache.hadoop.mapreduce.task.reduce.ShuffleSchedulerImpl;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManager;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl;
 import org.apache.hadoop.mapreduce.task.reduce.ShuffleClientMetrics;
@@ -392,6 +394,9 @@ public class MapTask extends Task {
       LOG.info("wuchunghsuan: wait scheduler done.");
     }
 
+    // send preFetchPath to Job.
+    sendPreFetchPath(umbilical, scheduler.getPreFetchPaths());
+
     // Stop the event-fetcher thread
     eventFetcher.shutDown();
     
@@ -405,16 +410,43 @@ public class MapTask extends Task {
     copyPhase.complete(); // copy is already complete
     statusUpdate(umbilical);
 
-    RawKeyValueIterator kvIter = null;
-    try {
-      kvIter = merger.close();
-    } catch (Throwable e) {
-      LOG.info("wuchunghsuan: final merge error -> " + e.getMessage());
-    }
+    // RawKeyValueIterator kvIter = null;
+    // try {
+    //   kvIter = merger.close();
+    // } catch (Throwable e) {
+    //   LOG.info("wuchunghsuan: final merge error -> " + e.getMessage());
+    // }
 
-    while(true) {
-      LOG.info("wuchunghsuan: wait here.");
-      Thread.sleep(1000);
+    // while(true) {
+    //   LOG.info("wuchunghsuan: wait here.");
+    //   Thread.sleep(1000);
+    // }
+    done(umbilical, reporter);
+  }
+
+  public void sendPreFetchPath(TaskUmbilicalProtocol umbilical, ArrayList<CompressAwarePath> paths) throws IOException {
+    int retries = 10;
+    while (true) {
+      try {
+        this.getJobID();
+        String[] pathArray = new String[paths.size()];
+        long[] lengths = new long[paths.size()];
+        long[] sizes = new long[paths.size()];
+        for(int i = 0; i < paths.size(); i++) {
+          pathArray[i] = paths.get(i).toString();
+          lengths[i] = paths.get(i).getRawDataLength();
+          sizes[i] = paths.get(i).getCompressedSize();
+        }
+        umbilical.sendPreFetchPath(getTaskID(), pathArray, lengths, sizes);
+        LOG.info("wuchunghsuan: Task '" + getTaskID() + "' sendPreFetchPath.");
+        return;
+      } catch (IOException ie) {
+        LOG.warn("Failure signalling completion: " + 
+                 StringUtils.stringifyException(ie));
+        if (--retries == 0) {
+          throw ie;
+        }
+      }
     }
   }
 

@@ -1751,7 +1751,7 @@ public abstract class TaskAttemptImpl implements
       // (new SpeculatorEvent
       //     (taskAttempt.reportedStatus, taskAttempt.clock.getTime()));
     }
-}
+  }
 
   private static class FailedTransition implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {

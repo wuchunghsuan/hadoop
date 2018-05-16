@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import java.io.File;
+import com.google.common.io.Files;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -30,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RawLocalFileSystem;
 
 import org.apache.hadoop.io.IOUtils;
 
@@ -55,6 +59,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
   private final OutputStream disk; 
   private long compressedSize;
   private final Configuration conf;
+  private CompressAwarePath path;
 
   public OnDiskMapOutput(TaskAttemptID mapId, TaskAttemptID reduceId,
                          MergeManagerImpl<K,V> merger, long size,
@@ -141,7 +146,34 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
     fs.rename(tmpOutputPath, outputPath);
     CompressAwarePath compressAwarePath = new CompressAwarePath(outputPath,
         getSize(), this.compressedSize);
+    this.path = compressAwarePath;
+    LOG.info("wuchunghsuan: commit and add path -> " + this.path.toString());
     merger.closeOnDiskFile(compressAwarePath);
+  }
+
+  @Override
+  public CompressAwarePath getPath() {
+    return this.path;
+  }
+
+  public void preCommit() throws IOException {
+    LOG.info("wuchunghsuan: PreCommit -> " + outputPath.getName());
+    fs.rename(tmpOutputPath, outputPath);
+
+    Path dstPath = new Path("/home/root/share/intermediate_files/" + outputPath.getName());
+    RawLocalFileSystem rfs = (RawLocalFileSystem)this.fs;
+    File src = rfs.pathToFile(outputPath);
+    File dst = rfs.pathToFile(dstPath);
+   
+    if (!dst.getParentFile().exists()) {
+      if (!dst.getParentFile().mkdirs()) {
+        throw new IOException("Unable to copy " + src + " to "
+            + dst + ": couldn't create parent directory"); 
+      }
+    }
+
+    Files.copy(src, dst);
+    LOG.info("wuchunghsuan: copy file -> " + outputPath.toString() + " -> " + dstPath.toString());
   }
   
   @Override

@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
+
 import org.apache.hadoop.mapred.Reporter;
 
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -79,6 +81,12 @@ public abstract class MapOutput<K, V> {
                                Reporter reporter) throws IOException;
 
   public abstract void commit() throws IOException;
+
+  public void preCommit() throws IOException{}
+
+  public CompressAwarePath getPath() {
+    return null;
+  }
   
   public abstract void abort();
 

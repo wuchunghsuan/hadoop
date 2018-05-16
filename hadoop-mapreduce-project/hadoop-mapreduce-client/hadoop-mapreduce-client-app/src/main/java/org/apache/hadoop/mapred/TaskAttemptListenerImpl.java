@@ -25,17 +25,20 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
@@ -259,6 +262,32 @@ public class TaskAttemptListenerImpl extends CompositeService
   }
 
   @Override
+  public void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException {
+    LOG.info("Send PreFetchPath List from " + taskAttemptID.toString());
+
+    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
+        TypeConverter.toYarn(taskAttemptID);
+
+    taskHeartbeatHandler.progressing(attemptID);
+
+    LOG.info("wuchunghsuan: handle PreFetchDone TaskAttemptEvent.");
+
+    ArrayList<CompressAwarePath> pathList = new ArrayList<CompressAwarePath>();
+    for(int i = 0; i < paths.length; i++) {
+      Path p = new Path(paths[i]);
+      pathList.add(new CompressAwarePath(p, rawDataLengths[i], compressSizes[i]));
+    }
+    
+    // context.getEventHandler().handle(
+    //     new TaskAttemptPreFetchPathEvent(attemptID, TaskAttemptEventType.TA_PREFETCHDONE, pathList));
+    String host = context.getJob(attemptID.getTaskId().getJobId())
+      .getTask(attemptID.getTaskId())
+      .getAttempt(attemptID)
+      .getNodeHttpAddress().split(":")[0];
+    context.getJob(attemptID.getTaskId().getJobId()).addPreFetchPaths(host, pathList);
+  }
+
+  @Override
   public void fatalError(TaskAttemptID taskAttemptID, String msg)
       throws IOException {
     // This happens only in Child and in the Task.
@@ -311,6 +340,22 @@ public class TaskAttemptListenerImpl extends CompositeService
     taskHeartbeatHandler.progressing(attemptID);
     
     return new MapTaskCompletionEventsUpdate(events, shouldReset);
+  }
+
+  @Override
+  public String[] getCAPaths(TaskAttemptID taskAttemptID) throws IOException {
+    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
+      TypeConverter.toYarn(taskAttemptID);
+    String host = context.getJob(attemptID.getTaskId().getJobId())
+      .getTask(attemptID.getTaskId())
+      .getAttempt(attemptID)
+      .getNodeHttpAddress().split(":")[0];
+    ArrayList<CompressAwarePath> paths = context.getJob(attemptID.getTaskId().getJobId()).getPreFetchPaths(host);
+    String[] ret = new String[paths.size()];
+    for(int i = 0; i < paths.size(); i++) {
+      ret[i] = paths.get(i).toString() + ":" + paths.get(i).getRawDataLength() + ":" + paths.get(i).getCompressedSize();
+    }
+    return ret;
   }
 
   @Override

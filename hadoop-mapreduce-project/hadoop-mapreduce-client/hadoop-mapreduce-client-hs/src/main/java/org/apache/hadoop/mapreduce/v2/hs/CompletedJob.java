@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -114,6 +115,16 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   @Override
   public Counters getAllCounters() {
     return jobInfo.getTotalCounters();
+  }
+
+  @Override
+  public ArrayList<CompressAwarePath> getPreFetchPaths(String host) {
+    return null;
+  }
+
+  @Override
+  public void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths) {
+
   }
 
   @Override

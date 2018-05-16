@@ -41,6 +41,7 @@ import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -501,6 +502,16 @@ public class MockJobs extends MockApps {
     tmpJobACLs = aclsManager.constructJobACLs(conf);
     final Map<JobACL, AccessControlList> jobACLs = tmpJobACLs;
     return new Job() {
+      @Override
+      public ArrayList<CompressAwarePath> getPreFetchPaths(String host) {
+        return null;
+      }
+
+      @Override
+      public void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths) {
+
+      }
+
       @Override
       public JobId getID() {
         return id;

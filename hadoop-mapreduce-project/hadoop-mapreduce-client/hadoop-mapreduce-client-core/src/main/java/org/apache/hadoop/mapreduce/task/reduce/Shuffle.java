@@ -19,7 +19,16 @@ package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.ArrayList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.JobConf;
@@ -42,6 +51,8 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
   private static final int MAX_EVENTS_TO_FETCH = 10000;
   private static final int MIN_EVENTS_TO_FETCH = 100;
   private static final int MAX_RPC_OUTSTANDING_EVENTS = 3000000;
+
+  private static final Log LOG = LogFactory.getLog(Shuffle.class);
   
   private ShuffleConsumerPlugin.Context context;
 
@@ -52,7 +63,7 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
   private TaskUmbilicalProtocol umbilical;
   
   private ShuffleSchedulerImpl<K,V> scheduler;
-  private MergeManager<K, V> merger;
+  private MergeManagerImpl<K, V> merger;
   private Throwable throwable = null;
   private String throwingThreadName = null;
   private Progress copyPhase;
@@ -80,7 +91,7 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     merger = createMergeManager(context);
   }
 
-  protected MergeManager<K, V> createMergeManager(
+  protected MergeManagerImpl<K, V> createMergeManager(
       ShuffleConsumerPlugin.Context context) {
     return new MergeManagerImpl<K, V>(reduceId, jobConf, context.getLocalFS(),
         context.getLocalDirAllocator(), reporter, context.getCodec(),
@@ -101,57 +112,66 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     int maxEventsToFetch = Math.min(MAX_EVENTS_TO_FETCH, eventsPerReducer);
 
     // Start the map-completion events fetcher thread
-    final EventFetcher<K,V> eventFetcher = 
-      new EventFetcher<K,V>(reduceId, umbilical, scheduler, this,
-          maxEventsToFetch);
-    eventFetcher.start();
+    // final EventFetcher<K,V> eventFetcher = 
+    //   new EventFetcher<K,V>(reduceId, umbilical, scheduler, this,
+    //       maxEventsToFetch);
+    // eventFetcher.start();
     
-    // Start the map-output fetcher threads
-    boolean isLocal = localMapFiles != null;
-    final int numFetchers = isLocal ? 1 :
-      jobConf.getInt(MRJobConfig.SHUFFLE_PARALLEL_COPIES, 5);
-    Fetcher<K,V>[] fetchers = new Fetcher[numFetchers];
-    if (isLocal) {
-      fetchers[0] = new LocalFetcher<K, V>(jobConf, reduceId, scheduler,
-          merger, reporter, metrics, this, reduceTask.getShuffleSecret(),
-          localMapFiles);
-      fetchers[0].start();
-    } else {
-      for (int i=0; i < numFetchers; ++i) {
-        fetchers[i] = new Fetcher<K,V>(jobConf, reduceId, scheduler, merger, 
-                                       reporter, metrics, this, 
-                                       reduceTask.getShuffleSecret());
-        fetchers[i].start();
-      }
-    }
+    // // Start the map-output fetcher threads
+    // boolean isLocal = localMapFiles != null;
+    // final int numFetchers = isLocal ? 1 :
+    //   jobConf.getInt(MRJobConfig.SHUFFLE_PARALLEL_COPIES, 5);
+    // Fetcher<K,V>[] fetchers = new Fetcher[numFetchers];
+    // if (isLocal) {
+    //   fetchers[0] = new LocalFetcher<K, V>(jobConf, reduceId, scheduler,
+    //       merger, reporter, metrics, this, reduceTask.getShuffleSecret(),
+    //       localMapFiles);
+    //   fetchers[0].start();
+    // } else {
+    //   for (int i=0; i < numFetchers; ++i) {
+    //     fetchers[i] = new Fetcher<K,V>(jobConf, reduceId, scheduler, merger, 
+    //                                    reporter, metrics, this, 
+    //                                    reduceTask.getShuffleSecret());
+    //     fetchers[i].start();
+    //   }
+    // }
     
-    // Wait for shuffle to complete successfully
-    while (!scheduler.waitUntilDone(PROGRESS_FREQUENCY)) {
-      reporter.progress();
+    // // Wait for shuffle to complete successfully
+    // while (!scheduler.waitUntilDone(PROGRESS_FREQUENCY)) {
+    //   reporter.progress();
       
-      synchronized (this) {
-        if (throwable != null) {
-          throw new ShuffleError("error in shuffle in " + throwingThreadName,
-                                 throwable);
-        }
-      }
-    }
+    //   synchronized (this) {
+    //     if (throwable != null) {
+    //       throw new ShuffleError("error in shuffle in " + throwingThreadName,
+    //                              throwable);
+    //     }
+    //   }
+    // }
 
-    // Stop the event-fetcher thread
-    eventFetcher.shutDown();
+    // // Stop the event-fetcher thread
+    // eventFetcher.shutDown();
     
-    // Stop the map-output fetcher threads
-    for (Fetcher<K,V> fetcher : fetchers) {
-      fetcher.shutDown();
-    }
+    // // Stop the map-output fetcher threads
+    // for (Fetcher<K,V> fetcher : fetchers) {
+    //   fetcher.shutDown();
+    // }
     
-    // stop the scheduler
-    scheduler.close();
+    // // stop the scheduler
+    // scheduler.close();
+
+    // commitOnDiskMapOutput
+    commitOnDiskMapOutput(merger);
+    // int i = 0;
+    // while(i != 3){
+    //   Thread.sleep(5000);
+    //   LOG.info("wuchunghsuan: wait here.");
+    // }
 
     copyPhase.complete(); // copy is already complete
     taskStatus.setPhase(TaskStatus.Phase.SORT);
     reduceTask.statusUpdate(umbilical);
 
+    
     // Finish the on-going merges...
     RawKeyValueIterator kvIter = null;
     try {
@@ -169,6 +189,30 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     }
     
     return kvIter;
+  }
+
+  private void commitOnDiskMapOutput(MergeManagerImpl<K, V> merger){
+    try{
+      FileSystem fs = FileSystem.getLocal(jobConf).getRaw();
+      Path commitPath = new Path("/home/root/share/intermediate_files/");
+      RemoteIterator<LocatedFileStatus> fri = fs.listFiles(commitPath, false);
+      while (fri.hasNext()) {
+        LOG.info("wuchunghsuan: commit file -> " + fri.next());
+      }
+
+      String[] pathsStr = umbilical.getCAPaths((org.apache.hadoop.mapred.TaskAttemptID)reduceId);
+      ArrayList<CompressAwarePath> paths = new ArrayList<CompressAwarePath>();
+      for(String str : pathsStr) {
+        CompressAwarePath path = new CompressAwarePath(new Path(str.split(":")[0]), 
+            Long.parseLong(str.split(":")[1]), Long.parseLong(str.split(":")[2]));
+        LOG.info("wuchunghsuan: merge file -> " + path.toString());
+        paths.add(path);
+        merger.closeOnDiskFile(path);
+      }
+    }
+    catch (IOException e){
+
+    }
   }
 
   @Override

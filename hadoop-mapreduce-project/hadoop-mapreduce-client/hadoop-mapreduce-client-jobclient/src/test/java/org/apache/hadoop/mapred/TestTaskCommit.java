@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -115,6 +116,14 @@ public class TestTaskCommit extends HadoopTestCase {
     @Override
     public void preDone(TaskAttemptID taskid) throws IOException {
       // taskDone = true;
+    }
+
+    public void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException {
+
+    }
+
+    public String[] getCAPaths(TaskAttemptID taskAttemptID) throws IOException {
+      return null;
     }
 
     @Override

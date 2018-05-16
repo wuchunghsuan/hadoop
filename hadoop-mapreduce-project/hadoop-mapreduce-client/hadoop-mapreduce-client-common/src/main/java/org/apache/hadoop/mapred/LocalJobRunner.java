@@ -685,6 +685,14 @@ public class LocalJobRunner implements ClientProtocol {
       // Do Nothing.
     }
 
+    public void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException {
+      // Do Nothing.
+    }
+
+    public String[] getCAPaths(TaskAttemptID taskAttemptID) throws IOException {
+      return null;
+    }
+
     public synchronized void fsError(TaskAttemptID taskId, String message) 
     throws IOException {
       LOG.fatal("FSError: "+ message + "from task: " + taskId);
