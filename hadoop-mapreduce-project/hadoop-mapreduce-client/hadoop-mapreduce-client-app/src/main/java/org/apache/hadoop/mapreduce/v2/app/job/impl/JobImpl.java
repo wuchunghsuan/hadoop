@@ -739,7 +739,16 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
   @Override
   public ArrayList<CompressAwarePath> getPreFetchPaths(String host) {
-    return this.preFetchPath.get(host);
+    readLock.lock();
+    try {
+      ArrayList<CompressAwarePath> ret = this.preFetchPath.get(host);
+      if(ret != null) {
+        this.preFetchPath.remove(host);
+      }
+      return ret;
+    } finally {
+      readLock.unlock();
+    }
   }
 
   @Override

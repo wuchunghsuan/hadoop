@@ -55,21 +55,6 @@ public class EventFetcher<K,V> extends Thread {
     this.maxEventsToFetch = maxEventsToFetch;
   }
 
-  public EventFetcher(TaskAttemptID reduce,
-                      TaskUmbilicalProtocol umbilical,
-                      ShuffleScheduler<K,V> scheduler,
-                      // ExceptionReporter reporter,
-                      int maxEventsToFetch) {
-    setName("EventFetcher for fetching Map Completion Events");
-    setDaemon(true);    
-    this.reduce = reduce;
-    this.umbilical = umbilical;
-    this.scheduler = scheduler;
-    // exceptionReporter = reporter;
-    this.maxEventsToFetch = maxEventsToFetch;
-
-  }
-
   @Override
   public void run() {
     int failures = 0;

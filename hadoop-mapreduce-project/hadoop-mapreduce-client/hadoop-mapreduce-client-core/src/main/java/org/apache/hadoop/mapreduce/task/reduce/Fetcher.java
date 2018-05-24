@@ -319,6 +319,14 @@ public class Fetcher<K,V> extends Thread {
     DataInputStream input = null;
     
     try {
+      LOG.info("wuchunghsuan: openShuffleUrl host->"+host.toString()+",url->"+url.toString());
+      
+      try {
+        Thread.sleep(20000);
+      } catch (Exception e) {
+        //TODO: handle exception
+      }
+      
       input = openShuffleUrl(host, remaining, url);
       if (input == null) {
         return;
@@ -484,6 +492,9 @@ public class Fetcher<K,V> extends Thread {
         compressedLength = header.compressedLength;
         decompressedLength = header.uncompressedLength;
         forReduce = header.forReduce;
+
+        LOG.info("wuchunghsuan: header return -> "+mapId.toString()+","+compressedLength+","+decompressedLength+","+forReduce);
+
       } catch (IllegalArgumentException e) {
         badIdErrs.increment(1);
         LOG.warn("Invalid map id ", e);

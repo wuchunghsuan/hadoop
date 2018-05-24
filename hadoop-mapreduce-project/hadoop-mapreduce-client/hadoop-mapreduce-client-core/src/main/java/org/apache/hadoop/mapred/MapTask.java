@@ -68,6 +68,7 @@ import org.apache.hadoop.mapreduce.task.reduce.ShuffleSchedulerImpl;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManager;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl;
+import org.apache.hadoop.mapreduce.task.reduce.ExceptionReporter;
 import org.apache.hadoop.mapreduce.task.reduce.ShuffleClientMetrics;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.mapreduce.lib.map.WrappedMapper;
@@ -358,14 +359,22 @@ public class MapTask extends Task {
     // done(umbilical, reporter);
     sendPreDone(umbilical);
 
+    // LOG.info("wuchunghsuan: wait for 10s.");
+    // Thread.sleep(10000);
+
     // Scheduler
     ShuffleSchedulerImpl<Object, Object> scheduler = new ShuffleSchedulerImpl<Object, Object>(job, taskStatus, getTaskID(),
         copyPhase, 
         getCounters().findCounter(TaskCounter.SHUFFLED_MAPS),
         getCounters().findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES), 
         getCounters().findCounter(FileOutputFormatCounter.BYTES_WRITTEN));
+
+    // ExceptionReporter
+    ExceptionReporterImp exceptionReporter =  new ExceptionReporterImp(scheduler);
+
     // EventFetcher
-    EventFetcher<Object, Object> eventFetcher = new EventFetcher<Object, Object>(getTaskID(), umbilical, scheduler, 1000);
+    EventFetcher<Object, Object> eventFetcher = new EventFetcher<Object, Object>(
+        getTaskID(), umbilical, scheduler, exceptionReporter, 1000);
     eventFetcher.start();
 
     // Merger
@@ -379,16 +388,20 @@ public class MapTask extends Task {
         conf.getCombinerClass(), combineCollector, 
         spilledRecordsCounter,
         getCounters().findCounter(TaskCounter.COMBINE_INPUT_RECORDS),
-        mergedMapOutputsCounter, null, copyPhase,
+        mergedMapOutputsCounter, exceptionReporter, copyPhase,
         getMapOutputFile());
 
     // Fetcher
+    int numFetchers = 5;
+    Fetcher<Object, Object>[] fetchers = new Fetcher[numFetchers];
     ShuffleClientMetrics metrics = new ShuffleClientMetrics(getTaskID(), job);
-    Fetcher<Object, Object> fetcher = new Fetcher<Object, Object>(job, getTaskID(), scheduler, merger, 
-                                       reporter, metrics, null, 
+    for(int i = 0; i < numFetchers; i++) {
+      fetchers[i] = new Fetcher<Object, Object>(job, getTaskID(), scheduler, merger, 
+                                       reporter, metrics, exceptionReporter, 
                                        this.getShuffleSecret());
-    fetcher.start();
-
+      fetchers[i].start();
+    }
+    
     while (!scheduler.waitUntilDone(2000)) {
       reporter.progress();
       LOG.info("wuchunghsuan: wait scheduler done.");
@@ -401,8 +414,9 @@ public class MapTask extends Task {
     eventFetcher.shutDown();
     
     // Stop the map-output fetcher threads
-    fetcher.shutDown();
-
+    for (Fetcher<Object, Object> fetcher : fetchers) {
+      fetcher.shutDown();
+    }
     
     // stop the scheduler
     scheduler.close();
@@ -423,6 +437,30 @@ public class MapTask extends Task {
     // }
     done(umbilical, reporter);
   }
+
+  class ExceptionReporterImp implements ExceptionReporter {
+    private Throwable throwable = null;
+    private String throwingThreadName = null;
+    private ShuffleSchedulerImpl<Object, Object> scheduler;
+
+    public ExceptionReporterImp(ShuffleSchedulerImpl<Object, Object> sch) {
+      this.scheduler = sch;
+    }
+
+    public synchronized void reportException(Throwable t) {
+      if (throwable == null) {
+        throwable = t;
+        throwingThreadName = Thread.currentThread().getName();
+        // Notify the scheduler so that the reporting thread finds the 
+        // exception immediately.
+        synchronized (scheduler) {
+          scheduler.notifyAll();
+        }
+      }
+    }
+  }
+
+  
 
   public void sendPreFetchPath(TaskUmbilicalProtocol umbilical, ArrayList<CompressAwarePath> paths) throws IOException {
     int retries = 10;

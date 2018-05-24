@@ -447,6 +447,9 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     }
     host.addKnownMap(mapId);
 
+    LOG.info("wuchunghsuan: addKnownMapOutput HostName -> "
+        + hostName + " hostUrl -> " + hostUrl + " mapId -> " + mapId);
+
     // Mark the host as pending
     if (host.getState() == State.PENDING) {
       pendingHosts.add(host);

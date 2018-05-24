@@ -193,13 +193,6 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
 
   private void commitOnDiskMapOutput(MergeManagerImpl<K, V> merger){
     try{
-      FileSystem fs = FileSystem.getLocal(jobConf).getRaw();
-      Path commitPath = new Path("/home/root/share/intermediate_files/");
-      RemoteIterator<LocatedFileStatus> fri = fs.listFiles(commitPath, false);
-      while (fri.hasNext()) {
-        LOG.info("wuchunghsuan: commit file -> " + fri.next());
-      }
-
       String[] pathsStr = umbilical.getCAPaths((org.apache.hadoop.mapred.TaskAttemptID)reduceId);
       ArrayList<CompressAwarePath> paths = new ArrayList<CompressAwarePath>();
       for(String str : pathsStr) {

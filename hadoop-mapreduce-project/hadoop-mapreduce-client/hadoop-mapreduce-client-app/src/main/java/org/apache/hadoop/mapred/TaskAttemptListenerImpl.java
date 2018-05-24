@@ -56,6 +56,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.StringInterner;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 /**
@@ -270,8 +271,6 @@ public class TaskAttemptListenerImpl extends CompositeService
 
     taskHeartbeatHandler.progressing(attemptID);
 
-    LOG.info("wuchunghsuan: handle PreFetchDone TaskAttemptEvent.");
-
     ArrayList<CompressAwarePath> pathList = new ArrayList<CompressAwarePath>();
     for(int i = 0; i < paths.length; i++) {
       Path p = new Path(paths[i]);
@@ -280,11 +279,12 @@ public class TaskAttemptListenerImpl extends CompositeService
     
     // context.getEventHandler().handle(
     //     new TaskAttemptPreFetchPathEvent(attemptID, TaskAttemptEventType.TA_PREFETCHDONE, pathList));
-    String host = context.getJob(attemptID.getTaskId().getJobId())
+    NodeId nodeId = context.getJob(attemptID.getTaskId().getJobId())
       .getTask(attemptID.getTaskId())
       .getAttempt(attemptID)
-      .getNodeHttpAddress().split(":")[0];
-    context.getJob(attemptID.getTaskId().getJobId()).addPreFetchPaths(host, pathList);
+      .getNodeId();
+    context.getJob(attemptID.getTaskId().getJobId()).addPreFetchPaths(nodeId.toString(), pathList);
+    LOG.info("wuchunghsuan: Add CAPath list, Node -> " + nodeId.toString());
   }
 
   @Override
@@ -346,15 +346,20 @@ public class TaskAttemptListenerImpl extends CompositeService
   public String[] getCAPaths(TaskAttemptID taskAttemptID) throws IOException {
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
       TypeConverter.toYarn(taskAttemptID);
-    String host = context.getJob(attemptID.getTaskId().getJobId())
+    // String host = context.getJob(attemptID.getTaskId().getJobId())
+    //   .getTask(attemptID.getTaskId())
+    //   .getAttempt(attemptID)
+    //   .getNodeHttpAddress().split(":")[0];
+    NodeId nodeId = context.getJob(attemptID.getTaskId().getJobId())
       .getTask(attemptID.getTaskId())
       .getAttempt(attemptID)
-      .getNodeHttpAddress().split(":")[0];
-    ArrayList<CompressAwarePath> paths = context.getJob(attemptID.getTaskId().getJobId()).getPreFetchPaths(host);
+      .getNodeId();
+    ArrayList<CompressAwarePath> paths = context.getJob(attemptID.getTaskId().getJobId()).getPreFetchPaths(nodeId.toString());
     String[] ret = new String[paths.size()];
     for(int i = 0; i < paths.size(); i++) {
       ret[i] = paths.get(i).toString() + ":" + paths.get(i).getRawDataLength() + ":" + paths.get(i).getCompressedSize();
     }
+    LOG.info("wuchunghsuan: \n get CAPaths -> " + ret.toString() + " \n by Node -> " + nodeId.toString());
     return ret;
   }
 
