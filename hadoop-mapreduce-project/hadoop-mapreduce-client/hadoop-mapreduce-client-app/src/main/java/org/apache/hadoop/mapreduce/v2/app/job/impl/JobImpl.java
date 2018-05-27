@@ -232,6 +232,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private Map<String, ArrayList<CompressAwarePath> > preFetchPath =
     new HashMap<String, ArrayList<CompressAwarePath> >();
 
+  private Map<String, PreFetcherCounter> preFetcherMap = 
+    new HashMap<String, PreFetcherCounter>();
+
   private static final DiagnosticsUpdateTransition
       DIAGNOSTIC_UPDATE_TRANSITION = new DiagnosticsUpdateTransition();
   private static final InternalErrorTransition
@@ -883,19 +886,62 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
   @Override
   public TaskCompletionEvent[] getMapAttemptPreDoneEvents(
-      int startIndex, int maxEvents) {
+      int startIndex, int maxEvents, String host, String mapId) {
     TaskCompletionEvent[] events = EMPTY_TASK_COMPLETION_EVENTS;
     readLock.lock();
     try {
+      PreFetcherCounter counter;
+      if(this.preFetcherMap.get(host) != null) {
+        counter = this.preFetcherMap.get(host);
+        if(counter.mapId != mapId) {
+          LOG.info("wuchunghsuan: Already have fetcher on this node -> " + host
+              + " ;fetcher mapId -> " + counter.mapId + " ;mapId -> " + mapId);
+          return new TaskCompletionEvent[0];
+        }
+      }
+      else {
+        counter = new PreFetcherCounter(mapId);
+        this.preFetcherMap.put(host, counter);
+        LOG.info("wuchunghsuan: Put preFetcherMap -> " + host);
+      }
       if (mapAttemptPreDoneEvents.size() > startIndex) {
         int actualMax = Math.min(maxEvents,
             (mapAttemptPreDoneEvents.size() - startIndex));
         events = mapAttemptPreDoneEvents.subList(startIndex,
             actualMax + startIndex).toArray(events);
+        //Add preFetchMap
+        counter.add(events.length);
+        preFetcherMap.put(host, counter);
       }
       return events;
     } finally {
       readLock.unlock();
+    }
+  }
+
+  @Override
+  public boolean isNeedFetcher(String host, String mapId) {
+    PreFetcherCounter counter;
+    if(this.preFetcherMap.get(host) != null) {
+      counter = this.preFetcherMap.get(host);
+      if(counter.mapId != mapId) {
+        LOG.info("wuchunghsuan: Already have fetcher on this node -> " + host
+            + " ;fetcher mapId -> " + counter.mapId + " ;mapId -> " + mapId);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  class PreFetcherCounter {
+    public String mapId;
+    public Integer count;
+    public PreFetcherCounter(String mapId) {
+      this.mapId = mapId;
+      this.count = 0;
+    }
+    public void add(Integer num) {
+      this.count += num;
     }
   }
 

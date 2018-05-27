@@ -263,7 +263,8 @@ public class TaskAttemptListenerImpl extends CompositeService
   }
 
   @Override
-  public void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException {
+  public void sendPreFetchPath(TaskAttemptID taskAttemptID, 
+      String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException {
     LOG.info("Send PreFetchPath List from " + taskAttemptID.toString());
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
@@ -276,14 +277,13 @@ public class TaskAttemptListenerImpl extends CompositeService
       Path p = new Path(paths[i]);
       pathList.add(new CompressAwarePath(p, rawDataLengths[i], compressSizes[i]));
     }
-    
-    // context.getEventHandler().handle(
-    //     new TaskAttemptPreFetchPathEvent(attemptID, TaskAttemptEventType.TA_PREFETCHDONE, pathList));
+
     NodeId nodeId = context.getJob(attemptID.getTaskId().getJobId())
-      .getTask(attemptID.getTaskId())
-      .getAttempt(attemptID)
-      .getNodeId();
-    context.getJob(attemptID.getTaskId().getJobId()).addPreFetchPaths(nodeId.toString(), pathList);
+        .getTask(attemptID.getTaskId())
+        .getAttempt(attemptID)
+        .getNodeId();
+    context.getJob(attemptID.getTaskId().getJobId())
+        .addPreFetchPaths(nodeId.toString(), pathList);
     LOG.info("wuchunghsuan: Add CAPath list, Node -> " + nodeId.toString());
   }
 
@@ -333,13 +333,29 @@ public class TaskAttemptListenerImpl extends CompositeService
     // TaskCompletionEvent[] events =
     //     context.getJob(attemptID.getTaskId().getJobId()).getMapAttemptCompletionEvents(
     //         startIndex, maxEvents);
+    NodeId nodeId = context.getJob(attemptID.getTaskId().getJobId())
+        .getTask(attemptID.getTaskId())
+        .getAttempt(attemptID)
+        .getNodeId();
     TaskCompletionEvent[] events =
         context.getJob(attemptID.getTaskId().getJobId()).getMapAttemptPreDoneEvents(
-            startIndex, maxEvents);
+            startIndex, maxEvents, nodeId.toString(), attemptID.toString());
 
     taskHeartbeatHandler.progressing(attemptID);
     
     return new MapTaskCompletionEventsUpdate(events, shouldReset);
+  }
+
+  @Override
+  public boolean isNeedFetcher(TaskAttemptID taskAttemptID) {
+    LOG.info("wuchunghsuan: isNeedFetcher request from " + taskAttemptID.toString());
+    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
+      TypeConverter.toYarn(taskAttemptID);
+    NodeId nodeId = context.getJob(attemptID.getTaskId().getJobId())
+        .getTask(attemptID.getTaskId())
+        .getAttempt(attemptID)
+        .getNodeId();
+    return context.getJob(attemptID.getTaskId().getJobId()).isNeedFetcher(nodeId.toString(), attemptID.toString());
   }
 
   @Override

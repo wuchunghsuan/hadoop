@@ -146,6 +146,13 @@ public class EventFetcher<K,V> extends Thread {
           ++numNewMaps;
         }
       }
+      if(events.length == 0) {
+        if(!umbilical.isNeedFetcher((org.apache.hadoop.mapred.TaskAttemptID)reduce)) {
+          // Shutdown scheduler.
+          LOG.info("wuchunghsuan: Shutdown scheduler, set setRemainingMaps to 0.");
+          scheduler.setRemainingMaps(0);
+        }
+      }
     } while (events.length == maxEventsToFetch);
 
     return numNewMaps;

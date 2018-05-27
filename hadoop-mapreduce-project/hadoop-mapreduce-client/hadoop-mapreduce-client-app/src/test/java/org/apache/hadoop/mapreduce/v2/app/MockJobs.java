@@ -591,9 +591,14 @@ public class MockJobs extends MockApps {
 
       @Override
       public TaskCompletionEvent[] getMapAttemptPreDoneEvents(
-          int startIndex, int maxEvents) {
+          int startIndex, int maxEvents, String host, String mapId) {
         return null;
       }
+
+      @Override
+    public boolean isNeedFetcher(String host, String mapId) {
+      return true;
+    }
 
       @Override
       public Map<TaskId, Task> getTasks(TaskType taskType) {

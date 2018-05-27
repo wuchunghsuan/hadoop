@@ -616,6 +616,11 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     return maxHostFailures;
   }
 
+  @Override
+  public synchronized void setRemainingMaps(int num) {
+    this.remainingMaps = num;
+  }
+
   private static class CopyTimeTracker {
     List<Interval> intervals;
     long copyMillis;

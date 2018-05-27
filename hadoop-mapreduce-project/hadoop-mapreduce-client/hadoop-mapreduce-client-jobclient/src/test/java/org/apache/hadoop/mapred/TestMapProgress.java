@@ -156,6 +156,10 @@ public class TestMapProgress extends TestCase {
                                                false);
     }
 
+    public boolean isNeedFetcher(TaskAttemptID taskAttemptID) {
+      return true;
+    }
+
     public void reportNextRecordRange(TaskAttemptID taskid, 
         SortedRanges.Range range) throws IOException {
       LOG.info("Task " + taskid + " reportedNextRecordRange " + range);

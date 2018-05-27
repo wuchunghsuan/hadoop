@@ -155,26 +155,6 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
   public CompressAwarePath getPath() {
     return this.path;
   }
-
-  public void preCommit() throws IOException {
-    LOG.info("wuchunghsuan: PreCommit -> " + outputPath.getName());
-    fs.rename(tmpOutputPath, outputPath);
-
-    Path dstPath = new Path("/home/root/share/intermediate_files/" + outputPath.getName());
-    RawLocalFileSystem rfs = (RawLocalFileSystem)this.fs;
-    File src = rfs.pathToFile(outputPath);
-    File dst = rfs.pathToFile(dstPath);
-   
-    if (!dst.getParentFile().exists()) {
-      if (!dst.getParentFile().mkdirs()) {
-        throw new IOException("Unable to copy " + src + " to "
-            + dst + ": couldn't create parent directory"); 
-      }
-    }
-
-    Files.copy(src, dst);
-    LOG.info("wuchunghsuan: copy file -> " + outputPath.toString() + " -> " + dstPath.toString());
-  }
   
   @Override
   public void abort() {

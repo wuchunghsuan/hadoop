@@ -141,6 +141,11 @@ public class TestTaskCommit extends HadoopTestCase {
     }
 
     @Override
+    public boolean isNeedFetcher(TaskAttemptID taskAttemptID) {
+      return true;
+    }
+
+    @Override
     public JvmTask getTask(JvmContext context) throws IOException {
       return null;
     }

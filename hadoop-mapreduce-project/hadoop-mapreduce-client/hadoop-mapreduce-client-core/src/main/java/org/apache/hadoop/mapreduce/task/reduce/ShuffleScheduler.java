@@ -44,4 +44,5 @@ public interface ShuffleScheduler<K,V> {
 
   public void close() throws InterruptedException;
 
+  public void setRemainingMaps(int num);
 }

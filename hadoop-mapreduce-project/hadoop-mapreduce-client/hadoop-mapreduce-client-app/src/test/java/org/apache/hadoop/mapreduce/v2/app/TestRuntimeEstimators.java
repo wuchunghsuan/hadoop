@@ -480,8 +480,13 @@ public class TestRuntimeEstimators {
 
     @Override
     public TaskCompletionEvent[]
-            getMapAttemptPreDoneEvents(int startIndex, int maxEvents) {
+            getMapAttemptPreDoneEvents(int startIndex, int maxEvents, String host, String mapId) {
       throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean isNeedFetcher(String host, String mapId) {
+      return true;
     }
 
     @Override

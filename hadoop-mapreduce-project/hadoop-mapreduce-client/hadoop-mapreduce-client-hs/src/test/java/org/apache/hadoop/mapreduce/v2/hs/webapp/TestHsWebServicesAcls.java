@@ -417,8 +417,13 @@ public class TestHsWebServicesAcls {
 
     @Override
     public TaskCompletionEvent[] getMapAttemptPreDoneEvents(
-        int startIndex, int maxEvents) {
-      return mockJob.getMapAttemptPreDoneEvents(startIndex, maxEvents);
+        int startIndex, int maxEvents, String host, String mapId) {
+      return mockJob.getMapAttemptPreDoneEvents(startIndex, maxEvents, host, mapId);
+    }
+
+    @Override
+    public boolean isNeedFetcher(String host, String mapId) {
+      return true;
     }
 
     @Override

@@ -219,9 +219,14 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public synchronized TaskCompletionEvent[] getMapAttemptPreDoneEvents(
-      int startIndex, int maxEvents) {
+      int startIndex, int maxEvents, String host, String mapId) {
     return null;
   }
+
+  @Override
+    public boolean isNeedFetcher(String host, String mapId) {
+      return true;
+    }
 
   private static TaskAttemptCompletionEvent[] getAttemptCompletionEvents(
       List<TaskAttemptCompletionEvent> eventList,
