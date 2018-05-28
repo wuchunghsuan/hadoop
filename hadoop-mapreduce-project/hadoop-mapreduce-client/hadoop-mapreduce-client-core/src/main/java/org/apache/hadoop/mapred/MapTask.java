@@ -356,85 +356,73 @@ public class MapTask extends Task {
     } else {
       runOldMapper(job, splitMetaInfo, umbilical, reporter);
     }
-    // done(umbilical, reporter);
-    sendPreDone(umbilical);
-
-    // LOG.info("wuchunghsuan: wait for 10s.");
-    // Thread.sleep(10000);
-
-    // Scheduler
-    ShuffleSchedulerImpl<Object, Object> scheduler = new ShuffleSchedulerImpl<Object, Object>(job, taskStatus, getTaskID(),
-        copyPhase, 
-        getCounters().findCounter(TaskCounter.SHUFFLED_MAPS),
-        getCounters().findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES), 
-        getCounters().findCounter(FileOutputFormatCounter.BYTES_WRITTEN));
-
-    // ExceptionReporter
-    ExceptionReporterImp exceptionReporter =  new ExceptionReporterImp(scheduler);
-
-    // EventFetcher
-    EventFetcher<Object, Object> eventFetcher = new EventFetcher<Object, Object>(
-        getTaskID(), umbilical, scheduler, exceptionReporter, 1000);
-    eventFetcher.start();
-
-    // Merger
-    CompressionCodec codec = initCodec();
-    CombineOutputCollector combineCollector = 
-        (null != conf.getCombinerClass()) ? 
-        new CombineOutputCollector(reduceCombineOutputCounter, reporter, conf) : null;
-
-    MergeManager<Object, Object> merger = new MergeManagerImpl<Object, Object>(getTaskID(), job, FileSystem.getLocal(job),
-        super.lDirAlloc, reporter, codec,
-        conf.getCombinerClass(), combineCollector, 
-        spilledRecordsCounter,
-        getCounters().findCounter(TaskCounter.COMBINE_INPUT_RECORDS),
-        mergedMapOutputsCounter, exceptionReporter, copyPhase,
-        getMapOutputFile());
-
-    // Fetcher
-    int numFetchers = 5;
-    Fetcher<Object, Object>[] fetchers = new Fetcher[numFetchers];
-    ShuffleClientMetrics metrics = new ShuffleClientMetrics(getTaskID(), job);
-    for(int i = 0; i < numFetchers; i++) {
-      fetchers[i] = new Fetcher<Object, Object>(job, getTaskID(), scheduler, merger, 
-                                       reporter, metrics, exceptionReporter, 
-                                       this.getShuffleSecret());
-      fetchers[i].start();
-    }
     
-    while (!scheduler.waitUntilDone(2000)) {
-      reporter.progress();
-      LOG.info("wuchunghsuan: wait scheduler done.");
+
+    if (conf.getNumReduceTasks() != 0) {
+      sendPreDone(umbilical);
+
+      // Scheduler
+      ShuffleSchedulerImpl<Object, Object> scheduler = new ShuffleSchedulerImpl<Object, Object>(job, taskStatus, getTaskID(),
+          copyPhase, 
+          getCounters().findCounter(TaskCounter.SHUFFLED_MAPS),
+          getCounters().findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES), 
+          getCounters().findCounter(FileOutputFormatCounter.BYTES_WRITTEN));
+
+      // ExceptionReporter
+      ExceptionReporterImp exceptionReporter =  new ExceptionReporterImp(scheduler);
+
+      // EventFetcher
+      EventFetcher<Object, Object> eventFetcher = new EventFetcher<Object, Object>(
+          getTaskID(), umbilical, scheduler, exceptionReporter, 1000);
+      eventFetcher.start();
+
+      // Merger
+      CompressionCodec codec = initCodec();
+      CombineOutputCollector combineCollector = 
+          (null != conf.getCombinerClass()) ? 
+          new CombineOutputCollector(reduceCombineOutputCounter, reporter, conf) : null;
+
+      MergeManager<Object, Object> merger = new MergeManagerImpl<Object, Object>(getTaskID(), job, FileSystem.getLocal(job),
+          super.lDirAlloc, reporter, codec,
+          conf.getCombinerClass(), combineCollector, 
+          spilledRecordsCounter,
+          getCounters().findCounter(TaskCounter.COMBINE_INPUT_RECORDS),
+          mergedMapOutputsCounter, exceptionReporter, copyPhase,
+          getMapOutputFile());
+
+      // Fetcher
+      int numFetchers = 5;
+      Fetcher<Object, Object>[] fetchers = new Fetcher[numFetchers];
+      ShuffleClientMetrics metrics = new ShuffleClientMetrics(getTaskID(), job);
+      for(int i = 0; i < numFetchers; i++) {
+        fetchers[i] = new Fetcher<Object, Object>(job, getTaskID(), scheduler, merger, 
+                                        reporter, metrics, exceptionReporter, 
+                                        this.getShuffleSecret());
+        fetchers[i].start();
+      }
+      
+      while (!scheduler.waitUntilDone(2000)) {
+        reporter.progress();
+        LOG.info("wuchunghsuan: wait scheduler done.");
+      }
+
+      // send preFetchPath to Job.
+      sendPreFetchPath(umbilical, scheduler.getPreFetchPaths());
+
+      // Stop the event-fetcher thread
+      eventFetcher.shutDown();
+      
+      // Stop the map-output fetcher threads
+      for (Fetcher<Object, Object> fetcher : fetchers) {
+        fetcher.shutDown();
+      }
+      
+      // stop the scheduler
+      scheduler.close();
+
+      copyPhase.complete(); // copy is already complete
+      statusUpdate(umbilical);
     }
-
-    // send preFetchPath to Job.
-    sendPreFetchPath(umbilical, scheduler.getPreFetchPaths());
-
-    // Stop the event-fetcher thread
-    eventFetcher.shutDown();
-    
-    // Stop the map-output fetcher threads
-    for (Fetcher<Object, Object> fetcher : fetchers) {
-      fetcher.shutDown();
-    }
-    
-    // stop the scheduler
-    scheduler.close();
-
-    copyPhase.complete(); // copy is already complete
-    statusUpdate(umbilical);
-
-    // RawKeyValueIterator kvIter = null;
-    // try {
-    //   kvIter = merger.close();
-    // } catch (Throwable e) {
-    //   LOG.info("wuchunghsuan: final merge error -> " + e.getMessage());
-    // }
-
-    // while(true) {
-    //   LOG.info("wuchunghsuan: wait here.");
-    //   Thread.sleep(1000);
-    // }
     done(umbilical, reporter);
   }
 
