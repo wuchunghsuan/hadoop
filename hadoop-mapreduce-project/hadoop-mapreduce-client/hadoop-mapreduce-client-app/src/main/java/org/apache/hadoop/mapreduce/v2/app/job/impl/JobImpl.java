@@ -924,7 +924,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     PreFetcherCounter counter;
     if(this.preFetcherMap.get(host) != null) {
       counter = this.preFetcherMap.get(host);
-      if(counter.mapId != mapId) {
+      if(!counter.mapId.equals(mapId)) {
         LOG.info("wuchunghsuan: Already have fetcher on this node -> " + host
             + " ;fetcher mapId -> " + counter.mapId + " ;mapId -> " + mapId);
         return false;
