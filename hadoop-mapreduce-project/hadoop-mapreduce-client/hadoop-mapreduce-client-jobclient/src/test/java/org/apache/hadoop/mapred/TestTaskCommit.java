@@ -141,8 +141,8 @@ public class TestTaskCommit extends HadoopTestCase {
     }
 
     @Override
-    public boolean isNeedFetcher(TaskAttemptID taskAttemptID) {
-      return true;
+    public int registFetcher(TaskAttemptID taskAttemptID) {
+      return -1;
     }
 
     @Override

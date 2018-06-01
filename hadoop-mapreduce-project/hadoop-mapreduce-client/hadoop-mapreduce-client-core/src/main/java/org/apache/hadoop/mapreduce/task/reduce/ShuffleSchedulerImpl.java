@@ -72,6 +72,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
 
   private final int totalMaps;
   private int remainingMaps;
+  private int preFetcherId;
   private Map<String, MapHost> mapLocations = new HashMap<String, MapHost>();
   private Set<MapHost> pendingHosts = new HashSet<MapHost>();
   private Set<TaskAttemptID> obsoleteMaps = new HashSet<TaskAttemptID>();
@@ -121,6 +122,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     abortFailureLimit = Math.max(30, totalMaps / 10);
     copyTimeTracker = new CopyTimeTracker();
     remainingMaps = totalMaps;
+    preFetcherId = 0;
     finishedMaps = new boolean[remainingMaps];
     this.reporter = reporter;
     this.status = status;
@@ -187,7 +189,8 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   public void resolve(TaskCompletionEvent event) {
     switch (event.getTaskStatus()) {
     case SUCCEEDED:
-      URI u = getBaseURI(reduceId, event.getTaskTrackerHttp());
+      // URI u = getBaseURI(reduceId, event.getTaskTrackerHttp());
+      URI u = getBasePreFetchURI(reduceId, event.getTaskTrackerHttp(), this.preFetcherId);
       addKnownMapOutput(u.getHost() + ":" + u.getPort(),
           u.toString(),
           event.getTaskAttemptId());
@@ -220,6 +223,24 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     baseUrl.append("&map=");
     URI u = URI.create(baseUrl.toString());
     return u;
+  }
+
+  static URI getBasePreFetchURI(TaskAttemptID reduceId, String url, int id) {
+    StringBuffer baseUrl = new StringBuffer(url);
+    if (!url.endsWith("/")) {
+      baseUrl.append("/");
+    }
+    baseUrl.append("mapOutput?job=");
+    baseUrl.append(reduceId.getJobID());
+    baseUrl.append("&reduce=");
+    baseUrl.append(id);
+    baseUrl.append("&map=");
+    URI u = URI.create(baseUrl.toString());
+    return u;
+  }
+
+  public void setPreFetcherId(int id) {
+    this.preFetcherId = id;
   }
 
   public ArrayList<CompressAwarePath> getPreFetchPaths() {
@@ -614,11 +635,6 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
 
   public int getMaxHostFailures() {
     return maxHostFailures;
-  }
-
-  @Override
-  public synchronized void setRemainingMaps(int num) {
-    this.remainingMaps = num;
   }
 
   private static class CopyTimeTracker {

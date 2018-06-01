@@ -156,8 +156,8 @@ public class TestMapProgress extends TestCase {
                                                false);
     }
 
-    public boolean isNeedFetcher(TaskAttemptID taskAttemptID) {
-      return true;
+    public int registFetcher(TaskAttemptID taskAttemptID) {
+      return -1;
     }
 
     public void reportNextRecordRange(TaskAttemptID taskid, 

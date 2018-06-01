@@ -422,8 +422,8 @@ public class TestHsWebServicesAcls {
     }
 
     @Override
-    public boolean isNeedFetcher(String host, String mapId) {
-      return true;
+    public int registFetcher(String host, String mapId) {
+      return -1;
     }
 
     @Override

@@ -347,15 +347,15 @@ public class TaskAttemptListenerImpl extends CompositeService
   }
 
   @Override
-  public boolean isNeedFetcher(TaskAttemptID taskAttemptID) {
-    LOG.info("wuchunghsuan: isNeedFetcher request from " + taskAttemptID.toString());
+  public int registFetcher(TaskAttemptID taskAttemptID) {
+    LOG.info("wuchunghsuan: registFetcher request from " + taskAttemptID.toString());
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
       TypeConverter.toYarn(taskAttemptID);
     NodeId nodeId = context.getJob(attemptID.getTaskId().getJobId())
         .getTask(attemptID.getTaskId())
         .getAttempt(attemptID)
         .getNodeId();
-    return context.getJob(attemptID.getTaskId().getJobId()).isNeedFetcher(nodeId.toString(), attemptID.toString());
+    return context.getJob(attemptID.getTaskId().getJobId()).registFetcher(nodeId.toString(), attemptID.toString());
   }
 
   @Override

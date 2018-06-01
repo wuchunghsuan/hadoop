@@ -168,5 +168,5 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
   throws IOException;
 
   String[] getCAPaths(TaskAttemptID id) throws IOException;
-  boolean isNeedFetcher(TaskAttemptID taskAttemptID);
+  int registFetcher(TaskAttemptID taskAttemptID);
 }

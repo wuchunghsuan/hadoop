@@ -713,8 +713,8 @@ public class LocalJobRunner implements ClientProtocol {
         org.apache.hadoop.mapred.TaskCompletionEvent.EMPTY_ARRAY, false);
     }
     
-    public boolean isNeedFetcher(TaskAttemptID taskAttemptID) {
-      return true;
+    public int registFetcher(TaskAttemptID taskAttemptID) {
+      return -1;
     }
   }
 

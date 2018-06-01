@@ -890,28 +890,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     TaskCompletionEvent[] events = EMPTY_TASK_COMPLETION_EVENTS;
     readLock.lock();
     try {
-      PreFetcherCounter counter;
-      if(this.preFetcherMap.get(host) != null) {
-        counter = this.preFetcherMap.get(host);
-        if(counter.mapId != mapId) {
-          LOG.info("wuchunghsuan: Already have fetcher on this node -> " + host
-              + " ;fetcher mapId -> " + counter.mapId + " ;mapId -> " + mapId);
-          return new TaskCompletionEvent[0];
-        }
-      }
-      else {
-        counter = new PreFetcherCounter(mapId);
-        this.preFetcherMap.put(host, counter);
-        LOG.info("wuchunghsuan: Put preFetcherMap -> " + host);
-      }
       if (mapAttemptPreDoneEvents.size() > startIndex) {
         int actualMax = Math.min(maxEvents,
             (mapAttemptPreDoneEvents.size() - startIndex));
         events = mapAttemptPreDoneEvents.subList(startIndex,
             actualMax + startIndex).toArray(events);
-        //Add preFetchMap
-        counter.add(events.length);
-        preFetcherMap.put(host, counter);
       }
       return events;
     } finally {
@@ -920,27 +903,41 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   }
 
   @Override
-  public boolean isNeedFetcher(String host, String mapId) {
-    PreFetcherCounter counter;
-    if(this.preFetcherMap.get(host) != null) {
-      counter = this.preFetcherMap.get(host);
-      if(!counter.mapId.equals(mapId)) {
-        LOG.info("wuchunghsuan: Already have fetcher on this node -> " + host
-            + " ;fetcher mapId -> " + counter.mapId + " ;mapId -> " + mapId);
-        return false;
+  public int registFetcher(String host, String mapId) {
+    writeLock.lock();
+    try {
+      PreFetcherCounter counter;
+      if(this.preFetcherMap.get(host) != null) {
+        counter = this.preFetcherMap.get(host);
+        if(!counter.mapId.equals(mapId)) {
+          LOG.info("wuchunghsuan: registFetcher: Already have fetcher on this node -> " + host
+              + " ;fetcher mapId -> " + counter.mapId + " ;mapId -> " + mapId);
+          return -1;
+        }
       }
+      else {
+        counter = new PreFetcherCounter(mapId, this.preFetcherMap.size());
+        this.preFetcherMap.put(host, counter);
+        LOG.info("wuchunghsuan: Preempt fetcher. Node -> " + host + " ;mapId -> " + mapId + " ;id -> " + counter.id);
+        return counter.id;
+      } 
+      return -1;
     }
-    return true;
+    finally {
+      writeLock.unlock();
+    }
   }
 
   class PreFetcherCounter {
     public String mapId;
-    public Integer count;
-    public PreFetcherCounter(String mapId) {
+    public int count;
+    public int id;
+    public PreFetcherCounter(String mapId, int id) {
       this.mapId = mapId;
       this.count = 0;
+      this.id = id;
     }
-    public void add(Integer num) {
+    public void add(int num) {
       this.count += num;
     }
   }

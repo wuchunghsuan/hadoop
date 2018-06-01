@@ -96,8 +96,8 @@ public interface Job {
 
   TaskCompletionEvent[]
       getMapAttemptPreDoneEvents(int startIndex, int maxEvents, String host, String mapId);
-
-	boolean isNeedFetcher(String host, String mapId);
+  
+  int registFetcher(String host, String mapId);
 
   ArrayList<CompressAwarePath> getPreFetchPaths(String host);
 
