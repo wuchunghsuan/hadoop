@@ -634,13 +634,14 @@ public class Fetcher<K,V> extends Thread {
       return false;
     }
     
-    if (forReduce != reduce) {
-      wrongReduceErrs.increment(1);
-      LOG.warn(getName() + " data for the wrong reduce map: " +
-               mapId + " len: " + compressedLength + " decomp len: " +
-               decompressedLength + " for reduce " + forReduce);
-      return false;
-    }
+    // Ignore reduceId check.
+    // if (forReduce != reduce) {
+    //   wrongReduceErrs.increment(1);
+    //   LOG.warn(getName() + " data for the wrong reduce map: " +
+    //            mapId + " len: " + compressedLength + " decomp len: " +
+    //            decompressedLength + " for reduce " + forReduce);
+    //   return false;
+    // }
 
     // Sanity check
     if (!remaining.contains(mapId)) {
