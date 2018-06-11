@@ -586,9 +586,8 @@ public class RMContainerAllocator extends RMContainerRequestor
     
     //check for slow start
     if (!getIsReduceStarted()) {//not set yet
-      // int completedMapsForReduceSlowstart = (int)Math.ceil(reduceSlowStart * 
-      //                 totalMaps);
-      int completedMapsForReduceSlowstart = totalMaps;
+      int completedMapsForReduceSlowstart = (int)Math.ceil(reduceSlowStart * 
+                      totalMaps);
       if(completedMaps < completedMapsForReduceSlowstart) {
         LOG.info("Reduce slow start threshold not met. " +
               "completedMapsForReduceSlowstart " + 
