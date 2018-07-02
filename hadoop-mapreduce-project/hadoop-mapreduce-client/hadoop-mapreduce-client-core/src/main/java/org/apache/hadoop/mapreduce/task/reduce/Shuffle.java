@@ -160,12 +160,13 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     // scheduler.close();
 
     // commitOnDiskMapOutput
-    commitOnDiskMapOutput(merger);
-    // int i = 0;
-    // while(i != 3){
-    //   Thread.sleep(5000);
-    //   LOG.info("wuchunghsuan: wait here.");
-    // }
+    int totalMapNum = this.jobConf.getNumMapTasks();
+    int startIndex = 0;
+    while(startIndex < totalMapNum) {
+      startIndex += commitOnDiskMapOutput(merger, startIndex);
+      LOG.info("wuchunghsuan: wait for merging. startIndex = " + startIndex);
+      Thread.sleep(2000);
+    }
 
     copyPhase.complete(); // copy is already complete
     taskStatus.setPhase(TaskStatus.Phase.SORT);
@@ -191,9 +192,9 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     return kvIter;
   }
 
-  private void commitOnDiskMapOutput(MergeManagerImpl<K, V> merger){
+  private int commitOnDiskMapOutput(MergeManagerImpl<K, V> merger, int startIndex){
     try{
-      String[] pathsStr = umbilical.getCAPaths((org.apache.hadoop.mapred.TaskAttemptID)reduceId);
+      String[] pathsStr = umbilical.getCAPaths((org.apache.hadoop.mapred.TaskAttemptID)reduceId, startIndex);
       ArrayList<CompressAwarePath> paths = new ArrayList<CompressAwarePath>();
       for(String str : pathsStr) {
         CompressAwarePath path = new CompressAwarePath(new Path(str.split(":")[0]), 
@@ -202,9 +203,10 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
         paths.add(path);
         merger.closeOnDiskFile(path);
       }
+      return paths.size();
     }
     catch (IOException e){
-
+      return 0;
     }
   }
 

@@ -243,7 +243,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     this.preFetcherId = id;
   }
 
-  public ArrayList<CompressAwarePath> getPreFetchPaths() {
+  public List<CompressAwarePath> getPreFetchPaths() {
     return this.preFetchPaths;
   }
 

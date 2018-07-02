@@ -99,9 +99,9 @@ public interface Job {
   
   int registFetcher(String host, String mapId);
 
-  ArrayList<CompressAwarePath> getPreFetchPaths(String host);
+  List<CompressAwarePath> getPreFetchPaths(String host, String reduceId, int startIndex);
 
-  void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths);
+  void addPreFetchPaths(String host, String mapId, ArrayList<CompressAwarePath> paths);
 
   /**
    * @return information for MR AppMasters (previously failed and current)
@@ -111,4 +111,5 @@ public interface Job {
   boolean checkAccess(UserGroupInformation callerUGI, JobACL jobOperation);
   
   public void setQueueName(String queueName);
+  public void setNumClusterNodes(int num);
 }

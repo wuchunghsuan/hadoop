@@ -402,12 +402,12 @@ public class TestRuntimeEstimators {
     }
 
     @Override
-    public ArrayList<CompressAwarePath> getPreFetchPaths(String host) {
+    public List<CompressAwarePath> getPreFetchPaths(String host, String reduceId, int startIndex) {
       return null;
     }
 
     @Override
-    public void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths) {
+    public void addPreFetchPaths(String host, String mapId, ArrayList<CompressAwarePath> paths) {
 
     }
   
@@ -547,6 +547,11 @@ public class TestRuntimeEstimators {
 
     @Override
     public void setQueueName(String queueName) {
+      // do nothing
+    }
+
+    @Override
+    public void setNumClusterNodes(int num) {
       // do nothing
     }
   }

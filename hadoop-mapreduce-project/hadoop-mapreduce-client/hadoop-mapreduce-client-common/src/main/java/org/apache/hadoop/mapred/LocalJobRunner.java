@@ -689,7 +689,7 @@ public class LocalJobRunner implements ClientProtocol {
       // Do Nothing.
     }
 
-    public String[] getCAPaths(TaskAttemptID taskAttemptID) throws IOException {
+    public String[] getCAPaths(TaskAttemptID taskAttemptID, int startIndex) throws IOException {
       return null;
     }
 

@@ -148,7 +148,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
         getSize(), this.compressedSize);
     this.path = compressAwarePath;
     LOG.info("wuchunghsuan: commit and add path -> " + this.path.toString());
-    merger.closeOnDiskFile(compressAwarePath);
+    // merger.closeOnDiskFile(compressAwarePath);
   }
 
   @Override

@@ -94,7 +94,7 @@ public class TestMapProgress extends TestCase {
       LOG.info("Task " + taskAttemptID + " reporting sendPreFetchPath.");
     }
 
-    public String[] getCAPaths(TaskAttemptID taskAttemptID) throws IOException {
+    public String[] getCAPaths(TaskAttemptID taskAttemptID, int startIndex) throws IOException {
       return null;
     }
 

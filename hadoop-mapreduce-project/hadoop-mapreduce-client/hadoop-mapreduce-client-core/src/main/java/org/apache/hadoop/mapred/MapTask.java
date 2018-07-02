@@ -365,6 +365,7 @@ public class MapTask extends Task {
     }
     // Try to regist fetcher.
     int fetcherId = umbilical.registFetcher((org.apache.hadoop.mapred.TaskAttemptID)getTaskID());
+    LOG.info("wuchunghsuan: fetcherId -> " + fetcherId);
     if (fetcherId == -1) {
       // Already have fetcher on this host.
       done(umbilical, reporter);
@@ -412,14 +413,18 @@ public class MapTask extends Task {
       fetchers[i].start();
     }
     
+    int preFetchPathsIndex = 0;
+
     while (!scheduler.waitUntilDone(2000)) {
       reporter.progress();
       LOG.info("wuchunghsuan: wait scheduler done.");
-    }
-
-    // send preFetchPath to Job.
-    if(scheduler.getPreFetchPaths().size() != 0) {
-      sendPreFetchPath(umbilical, scheduler.getPreFetchPaths());
+      int endIndex = scheduler.getPreFetchPaths().size();
+      if(preFetchPathsIndex < endIndex) {
+        LOG.info("wuchunghsuan: sendPreFetchPath from " + preFetchPathsIndex + " to " + endIndex);
+        List<CompressAwarePath> paths = scheduler.getPreFetchPaths().subList(preFetchPathsIndex, endIndex);
+        sendPreFetchPath(umbilical, paths);
+        preFetchPathsIndex = endIndex;
+      }
     }
 
     // Stop the event-fetcher thread
@@ -435,6 +440,15 @@ public class MapTask extends Task {
 
     copyPhase.complete(); // copy is already complete
     statusUpdate(umbilical);
+
+    // send preFetchPath to Job.
+    int endIndex = scheduler.getPreFetchPaths().size();
+    if(preFetchPathsIndex < endIndex) {
+      List<CompressAwarePath> paths = scheduler.getPreFetchPaths().subList(preFetchPathsIndex, endIndex);
+      sendPreFetchPath(umbilical, paths);
+      preFetchPathsIndex = endIndex;
+    }
+    LOG.info("wuchunghsuan: final sendPreFetchPath. preFetchPathsIndex = " + preFetchPathsIndex);
 
     // Map Task done.
     done(umbilical, reporter);
@@ -464,11 +478,11 @@ public class MapTask extends Task {
 
   
 
-  public void sendPreFetchPath(TaskUmbilicalProtocol umbilical, ArrayList<CompressAwarePath> paths) throws IOException {
+  public void sendPreFetchPath(TaskUmbilicalProtocol umbilical, List<CompressAwarePath> paths) 
+      throws IOException {
     int retries = 10;
     while (true) {
       try {
-        this.getJobID();
         String[] pathArray = new String[paths.size()];
         long[] lengths = new long[paths.size()];
         long[] sizes = new long[paths.size()];

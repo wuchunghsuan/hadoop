@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Stack;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
@@ -210,6 +211,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     // of uber-AM attempts (probably sent from MRAppMaster).
   public JobConf conf;
 
+  private int numClusterNodes = 0;
+
   //fields initialized in init
   private FileSystem fs;
   private Path remoteJobSubmitDir;
@@ -229,11 +232,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private final Map<TaskAttemptId, Integer> fetchFailuresMapping = 
     new HashMap<TaskAttemptId, Integer>();
 
-  private Map<String, ArrayList<CompressAwarePath> > preFetchPath =
-    new HashMap<String, ArrayList<CompressAwarePath> >();
+  private Map<String, ArrayList<ArrayList<CompressAwarePath>> > preFetchPath =
+    new HashMap<String, ArrayList<ArrayList<CompressAwarePath>> >();
 
-  private Map<String, PreFetcherCounter> preFetcherMap = 
-    new HashMap<String, PreFetcherCounter>();
+  private List<PreFetcherCounter> preFetcherList = 
+    new ArrayList<PreFetcherCounter>();
 
   private static final DiagnosticsUpdateTransition
       DIAGNOSTIC_UPDATE_TRANSITION = new DiagnosticsUpdateTransition();
@@ -741,22 +744,64 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   }
 
   @Override
-  public ArrayList<CompressAwarePath> getPreFetchPaths(String host) {
+  public List<CompressAwarePath> getPreFetchPaths(String host, String reduceId, int startIndex) {
     readLock.lock();
     try {
-      ArrayList<CompressAwarePath> ret = this.preFetchPath.get(host);
-      if(ret != null) {
-        this.preFetchPath.remove(host);
+      for(PreFetcherCounter counter : this.preFetcherList) {
+        if(counter.host.equals(host)) {
+          String mapId;
+          if(!counter.idMap.containsKey(reduceId)) {
+            mapId = counter.mapIds.pop();
+            counter.idMap.put(reduceId, mapId);
+          }
+          mapId = counter.idMap.get(reduceId);
+          if(!counter.pathMap.containsKey(mapId)) {
+            LOG.error("wuchunghsuan: getPreFetchPaths cannot find mapId.");
+            return new ArrayList<CompressAwarePath>();
+          }
+          ArrayList<CompressAwarePath> list = counter.pathMap.get(mapId);
+          if (list.size() > startIndex) {
+            ArrayList<CompressAwarePath> ret = new ArrayList<CompressAwarePath>(list.subList(startIndex, list.size()));
+            String str = "";
+            for(CompressAwarePath p : ret){
+              str += p.toString() + " | ";
+            }
+            LOG.info("wuchunghsuan: getPreFetchPaths from " + startIndex + " to " + list.size()
+                + ". Host -> " + host + " ReduceID -> " + reduceId + " Path: " + str);
+            return ret;
+          }
+          return new ArrayList<CompressAwarePath>();
+        }
       }
-      return ret;
+      LOG.error("wuchunghsuan: getPreFetchPaths");
+      return new ArrayList<CompressAwarePath>();
     } finally {
       readLock.unlock();
     }
   }
 
   @Override
-  public void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths) {
-    this.preFetchPath.put(host, paths);
+  public void addPreFetchPaths(String host, String mapId, ArrayList<CompressAwarePath> addPaths) {
+    writeLock.lock();
+    try {
+      for(PreFetcherCounter counter : this.preFetcherList) {
+        if(counter.host.equals(host)) {
+          ArrayList<CompressAwarePath> paths = counter.pathMap.get(mapId);
+          paths.addAll(addPaths);
+          String str = "";
+          for(CompressAwarePath p : addPaths){
+            str += p.toString() + " | ";
+          }
+          LOG.info("wuchunghsuan: addPreFetchPaths size: " + addPaths.size() + " host: " + host + " mapId: " + mapId + " paths: " + str);
+          return;
+        }
+      }
+      LOG.error("wuchunghsuan: addPreFetchPaths.");
+      return;
+    }
+    finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
@@ -906,22 +951,31 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public int registFetcher(String host, String mapId) {
     writeLock.lock();
     try {
-      PreFetcherCounter counter;
-      if(this.preFetcherMap.get(host) != null) {
-        counter = this.preFetcherMap.get(host);
-        if(!counter.mapId.equals(mapId)) {
-          LOG.info("wuchunghsuan: registFetcher: Already have fetcher on this node -> " + host
-              + " ;fetcher mapId -> " + counter.mapId + " ;mapId -> " + mapId);
-          return -1;
+      int reduceId = -1;
+      for(PreFetcherCounter counter : this.preFetcherList) {
+        reduceId += 1;
+        if(counter.host.equals("")) {
+          counter.host = host;
+          counter.count += 1;
+          counter.pathMap.put(mapId, new ArrayList<CompressAwarePath>());
+          counter.mapIds.add(mapId);
+          LOG.info("wuchunghsuan: registFetcher " + counter.count + " | " + reduceId);
+          return ((counter.count - 1) * this.numClusterNodes) + reduceId;
+        }
+        else if(counter.host.equals(host)) {
+          if(counter.count == counter.numFetchers) {
+            LOG.info("wuchunghsuan: registFetcher return -1");
+            return -1;
+          }
+          counter.count += 1;
+          counter.pathMap.put(mapId, new ArrayList<CompressAwarePath>());
+          counter.mapIds.add(mapId);
+          LOG.info("wuchunghsuan: registFetcher " + counter.count + " | " + reduceId);
+          return ((counter.count - 1) * this.numClusterNodes) + reduceId;
         }
       }
-      else {
-        counter = new PreFetcherCounter(mapId, this.preFetcherMap.size());
-        this.preFetcherMap.put(host, counter);
-        LOG.info("wuchunghsuan: Preempt fetcher. Node -> " + host + " ;mapId -> " + mapId + " ;id -> " + counter.id);
-        return counter.id;
-      } 
-      return -1;
+      LOG.info("wuchunghsuan: ERROR!");
+      return -2;
     }
     finally {
       writeLock.unlock();
@@ -929,16 +983,21 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   }
 
   class PreFetcherCounter {
-    public String mapId;
+    public String host;
+    public final int numFetchers;
     public int count;
-    public int id;
-    public PreFetcherCounter(String mapId, int id) {
-      this.mapId = mapId;
+    public Stack<String> mapIds;
+    // MapId -> Paths.
+    public Map<String, ArrayList<CompressAwarePath>> pathMap;
+    // reduceId -> mapId
+    public Map<String, String> idMap;
+    public PreFetcherCounter(int num) {
+      this.host = "";
+      this.numFetchers = num;
       this.count = 0;
-      this.id = id;
-    }
-    public void add(int num) {
-      this.count += num;
+      pathMap = new HashMap<String, ArrayList<CompressAwarePath>>();
+      idMap = new HashMap<String, String>();
+      mapIds = new Stack<String>();
     }
   }
 
@@ -1252,6 +1311,27 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.queueName = queueName;
     JobQueueChangeEvent jqce = new JobQueueChangeEvent(oldJobId, queueName);
     eventHandler.handle(new JobHistoryEvent(jobId, jqce));
+  }
+
+  @Override
+  public void setNumClusterNodes(int num) {
+    this.numClusterNodes = num;
+    for(int i = 0; i < num; i++) {
+      this.preFetcherList.add(new PreFetcherCounter(this.getTotalReduces() / num));
+    }
+    if(this.getTotalReduces() % num != 0) {
+      int remainder = this.getTotalReduces() % num;
+      for(int i = 0; i < remainder; i++) {
+        this.preFetcherList.set(i, 
+            new PreFetcherCounter(this.preFetcherList.get(i).numFetchers + 1));
+      }
+    }
+    String test = "| ";
+    for(PreFetcherCounter counter : this.preFetcherList) {
+      test += counter.numFetchers;
+      test += " | ";
+    }
+    LOG.info("wuchunghsuan: preFetcherList -> " + test);
   }
   
   /*

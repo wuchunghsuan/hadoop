@@ -294,12 +294,12 @@ public class TestHsWebServicesAcls {
       this.aclsMgr = new JobACLsManager(conf); 
     }
     @Override
-    public ArrayList<CompressAwarePath> getPreFetchPaths(String host) {
+    public List<CompressAwarePath> getPreFetchPaths(String host, String reduceId, int startIndex) {
       return null;
     }
 
     @Override
-    public void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths) {
+    public void addPreFetchPaths(String host, String mapId, ArrayList<CompressAwarePath> paths) {
 
     }
 
@@ -440,6 +440,10 @@ public class TestHsWebServicesAcls {
 
     @Override
     public void setQueueName(String queueName) {
+    }
+    @Override
+    public void setNumClusterNodes(int num) {
+      // do nothing
     }
   }
 }

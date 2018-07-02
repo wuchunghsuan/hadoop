@@ -122,7 +122,7 @@ public class TestTaskCommit extends HadoopTestCase {
 
     }
 
-    public String[] getCAPaths(TaskAttemptID taskAttemptID) throws IOException {
+    public String[] getCAPaths(TaskAttemptID taskAttemptID, int startIndex) throws IOException {
       return null;
     }
 

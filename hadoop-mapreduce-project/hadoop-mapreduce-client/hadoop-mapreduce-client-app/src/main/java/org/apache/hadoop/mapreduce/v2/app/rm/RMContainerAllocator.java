@@ -150,6 +150,8 @@ public class RMContainerAllocator extends RMContainerRequestor
   private int hostLocalAssigned = 0;
   private int rackLocalAssigned = 0;
   private int lastCompletedTasks = 0;
+
+  private int numClusterNodes = 0;
   
   private boolean recalculateReduceSchedule = false;
   private Resource mapResourceRequest = Resources.none();
@@ -720,6 +722,13 @@ public class RMContainerAllocator extends RMContainerRequestor
      */
     try {
       response = makeRemoteRequest();
+
+      if(this.numClusterNodes != response.getNumClusterNodes()) {
+        this.numClusterNodes = response.getNumClusterNodes();
+        this.getJob().setNumClusterNodes(this.numClusterNodes);
+        LOG.info("wuchunghsuan: getNumClusterNodes -> " + response.getNumClusterNodes());
+      }
+
       // Reset retry count if no exception occurred.
       retrystartTime = System.currentTimeMillis();
     } catch (ApplicationAttemptNotFoundException e ) {

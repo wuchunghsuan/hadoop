@@ -118,12 +118,12 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   }
 
   @Override
-  public ArrayList<CompressAwarePath> getPreFetchPaths(String host) {
+  public List<CompressAwarePath> getPreFetchPaths(String host, String reduceId, int startIndex) {
     return null;
   }
 
   @Override
-  public void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths) {
+  public void addPreFetchPaths(String host, String mapId, ArrayList<CompressAwarePath> paths) {
 
   }
 
@@ -489,5 +489,10 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   @Override
   public void setQueueName(String queueName) {
     throw new UnsupportedOperationException("Can't set job's queue name in history");
+  }
+  
+  @Override
+  public void setNumClusterNodes(int num) {
+    
   }
 }

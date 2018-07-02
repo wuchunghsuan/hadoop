@@ -503,12 +503,12 @@ public class MockJobs extends MockApps {
     final Map<JobACL, AccessControlList> jobACLs = tmpJobACLs;
     return new Job() {
       @Override
-      public ArrayList<CompressAwarePath> getPreFetchPaths(String host) {
+      public List<CompressAwarePath> getPreFetchPaths(String host, String reduceId, int startIndex) {
         return null;
       }
 
       @Override
-      public void addPreFetchPaths(String host, ArrayList<CompressAwarePath> paths) {
+      public void addPreFetchPaths(String host, String mapId, ArrayList<CompressAwarePath> paths) {
 
       }
 
@@ -655,6 +655,11 @@ public class MockJobs extends MockApps {
       @Override
       public void setQueueName(String queueName) {
         // do nothing
+      }
+      
+      @Override
+      public void setNumClusterNodes(int num) {
+        
       }
     };
   }
