@@ -97,11 +97,11 @@ public interface Job {
   TaskCompletionEvent[]
       getMapAttemptPreDoneEvents(int startIndex, int maxEvents, String host, String mapId);
   
-  int registFetcher(String host, String mapId);
+  int[] registFetcher(String host, String mapId);
 
   List<CompressAwarePath> getPreFetchPaths(String host, String reduceId, int startIndex);
 
-  void addPreFetchPaths(String host, String mapId, ArrayList<CompressAwarePath> paths);
+  void addPreFetchPaths(String host, String mapId, ArrayList<CompressAwarePath> paths, int fetcherId);
 
   /**
    * @return information for MR AppMasters (previously failed and current)

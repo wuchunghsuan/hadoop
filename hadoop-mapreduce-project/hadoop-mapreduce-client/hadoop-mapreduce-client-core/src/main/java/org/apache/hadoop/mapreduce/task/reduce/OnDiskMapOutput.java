@@ -72,6 +72,33 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
         mapOutputFile.getInputFileForWrite(mapId.getTaskID(), size));
   }
 
+  public OnDiskMapOutput(TaskAttemptID mapId, TaskAttemptID reduceId,
+                         MergeManagerImpl<K,V> merger, long size,
+                         JobConf conf,
+                         MapOutputFile mapOutputFile,
+                         int fetcher, boolean primaryMapOutput, int id)
+      throws IOException {
+    this(mapId, reduceId, merger, size, conf, mapOutputFile, fetcher,
+        primaryMapOutput, FileSystem.getLocal(conf).getRaw(),
+        mapOutputFile.getInputFileForWrite(mapId.getTaskID(), size), id);
+  }
+
+  @VisibleForTesting
+  OnDiskMapOutput(TaskAttemptID mapId, TaskAttemptID reduceId,
+                         MergeManagerImpl<K,V> merger, long size,
+                         JobConf conf,
+                         MapOutputFile mapOutputFile,
+                         int fetcher, boolean primaryMapOutput,
+                         FileSystem fs, Path outputPath, int id) throws IOException {
+    super(mapId, size, primaryMapOutput);
+    this.fs = fs;
+    this.merger = merger;
+    this.outputPath = new Path(outputPath.toString() + "_" + id);
+    tmpOutputPath = new Path(getTempPath(outputPath, fetcher) + "_" + id);
+    disk = CryptoUtils.wrapIfNecessary(conf, fs.create(tmpOutputPath));
+    this.conf = conf;
+  }
+
   @VisibleForTesting
   OnDiskMapOutput(TaskAttemptID mapId, TaskAttemptID reduceId,
                          MergeManagerImpl<K,V> merger, long size,
@@ -86,8 +113,6 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
     tmpOutputPath = getTempPath(outputPath, fetcher);
     disk = CryptoUtils.wrapIfNecessary(conf, fs.create(tmpOutputPath));
     this.conf = conf;
-
-    LOG.info("wuchunghsuan: Init OnDiskMapOutput tmpOutputPath -> " + tmpOutputPath + " outputPath -> " + outputPath);
   }
 
   @VisibleForTesting
@@ -147,7 +172,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
     CompressAwarePath compressAwarePath = new CompressAwarePath(outputPath,
         getSize(), this.compressedSize);
     this.path = compressAwarePath;
-    LOG.info("wuchunghsuan: commit and add path -> " + this.path.toString());
+    // LOG.info("wuchunghsuan: commit and add path -> " + this.path.toString());
     // merger.closeOnDiskFile(compressAwarePath);
   }
 

@@ -120,7 +120,7 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
 
   void preDone(TaskAttemptID taskid) throws IOException;
 
-  void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException;
+  void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes, int fetcherId) throws IOException;
   
   /** 
    * Report that the task is complete, but its commit is pending.
@@ -168,5 +168,5 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
   throws IOException;
 
   String[] getCAPaths(TaskAttemptID id, int startIndex) throws IOException;
-  int registFetcher(TaskAttemptID taskAttemptID);
+  int[] registFetcher(TaskAttemptID taskAttemptID);
 }

@@ -508,7 +508,7 @@ public class MockJobs extends MockApps {
       }
 
       @Override
-      public void addPreFetchPaths(String host, String mapId, ArrayList<CompressAwarePath> paths) {
+      public void addPreFetchPaths(String host, String mapId, ArrayList<CompressAwarePath> paths, int fetcherId) {
 
       }
 
@@ -596,8 +596,8 @@ public class MockJobs extends MockApps {
       }
 
       @Override
-    public int registFetcher(String host, String mapId) {
-      return -1;
+    public int[] registFetcher(String host, String mapId) {
+      return new int[]{-1};
     }
 
       @Override

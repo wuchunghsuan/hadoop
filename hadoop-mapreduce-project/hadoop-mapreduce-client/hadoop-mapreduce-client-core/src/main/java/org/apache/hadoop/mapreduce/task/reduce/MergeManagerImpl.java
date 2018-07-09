@@ -135,6 +135,8 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
   
   private final Progress mergePhase;
 
+  private int fetcherId;
+
   public MergeManagerImpl(TaskAttemptID reduceId, JobConf jobConf, 
                       FileSystem localFS,
                       LocalDirAllocator localDirAllocator,  
@@ -164,6 +166,8 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     
     this.localFS = localFS;
     this.rfs = ((LocalFileSystem)localFS).getRaw();
+
+    this.fetcherId = 0;
     
     final float maxInMemCopyUse =
       jobConf.getFloat(MRJobConfig.SHUFFLE_INPUT_BUFFER_PERCENT,
@@ -238,7 +242,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     
     this.mergePhase = mergePhase;
   }
-  
+
   protected MergeThread<InMemoryMapOutput<K,V>, K,V> createInMemoryMerger() {
     return new InMemoryMerger(this);
   }
@@ -262,6 +266,11 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
   }
 
   @Override
+  public void setFetcherId(int id) {
+    this.fetcherId = id;
+  }
+
+  @Override
   public synchronized MapOutput<K,V> reserve(TaskAttemptID mapId, 
                                              long requestedSize,
                                              int fetcher
@@ -271,9 +280,10 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       // LOG.info(mapId + ": Shuffling to disk since " + requestedSize + 
       //          " is greater than maxSingleShuffleLimit (" + 
       //          maxSingleShuffleLimit + ")");
-      LOG.info("wuchunghsuan: Force to use OnDiskMapOutput.");
+      LOG.info("wuchunghsuan: Force to use OnDiskMapOutput. maxSingleShuffleLimit: " 
+          + maxSingleShuffleLimit + ", requestedSize: " + requestedSize);
       return new OnDiskMapOutput<K,V>(mapId, reduceId, this, requestedSize,
-                                      jobConf, mapOutputFile, fetcher, true);
+                                      jobConf, mapOutputFile, fetcher, true, this.fetcherId);
     }
     
     // Stall shuffle if we are above the memory limit

@@ -264,7 +264,7 @@ public class TaskAttemptListenerImpl extends CompositeService
 
   @Override
   public void sendPreFetchPath(TaskAttemptID taskAttemptID, 
-      String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException {
+      String[] paths, long[] rawDataLengths, long[] compressSizes, int fetcherId) throws IOException {
     LOG.info("Send PreFetchPath List from " + taskAttemptID.toString());
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
@@ -283,8 +283,8 @@ public class TaskAttemptListenerImpl extends CompositeService
         .getAttempt(attemptID)
         .getNodeId();
     context.getJob(attemptID.getTaskId().getJobId())
-        .addPreFetchPaths(nodeId.toString(), attemptID.toString(), pathList);
-    LOG.info("wuchunghsuan: Add CAPath list, Node -> " + nodeId.toString());
+        .addPreFetchPaths(nodeId.toString(), attemptID.toString(), pathList, fetcherId);
+    LOG.info("wuchunghsuan: sendPreFetchPath. Node: " + nodeId.toString() + " ID: " + fetcherId);
   }
 
   @Override
@@ -347,7 +347,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   }
 
   @Override
-  public int registFetcher(TaskAttemptID taskAttemptID) {
+  public int[] registFetcher(TaskAttemptID taskAttemptID) {
     LOG.info("wuchunghsuan: registFetcher request from " + taskAttemptID.toString());
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
       TypeConverter.toYarn(taskAttemptID);

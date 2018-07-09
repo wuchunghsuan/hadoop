@@ -90,7 +90,7 @@ public class TestMapProgress extends TestCase {
       LOG.info("Task " + taskid + " reporting predone.");
     }
 
-    public void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException {
+    public void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes, int fetcherId) throws IOException {
       LOG.info("Task " + taskAttemptID + " reporting sendPreFetchPath.");
     }
 
@@ -156,8 +156,8 @@ public class TestMapProgress extends TestCase {
                                                false);
     }
 
-    public int registFetcher(TaskAttemptID taskAttemptID) {
-      return -1;
+    public int[] registFetcher(TaskAttemptID taskAttemptID) {
+      return new int[]{-1};
     }
 
     public void reportNextRecordRange(TaskAttemptID taskid, 

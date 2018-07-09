@@ -183,7 +183,7 @@ public class Fetcher<K,V> extends Thread {
         MapHost host = null;
         try {
           // If merge is on, block
-          merger.waitForResource();
+          //merger.waitForResource();
 
           // Get a host to shuffle from
           host = scheduler.getHost();
@@ -319,7 +319,6 @@ public class Fetcher<K,V> extends Thread {
     DataInputStream input = null;
     
     try {
-      LOG.info("wuchunghsuan: openShuffleUrl host->"+host.toString()+",url->"+url.toString());
       
       try {
         Thread.sleep(20000);
@@ -492,9 +491,6 @@ public class Fetcher<K,V> extends Thread {
         compressedLength = header.compressedLength;
         decompressedLength = header.uncompressedLength;
         forReduce = header.forReduce;
-
-        LOG.info("wuchunghsuan: header return -> "+mapId.toString()+","+compressedLength+","+decompressedLength+","+forReduce);
-
       } catch (IllegalArgumentException e) {
         badIdErrs.increment(1);
         LOG.warn("Invalid map id ", e);

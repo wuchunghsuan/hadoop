@@ -265,7 +265,6 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
 
       if(path != null){
         this.preFetchPaths.add(path);
-        LOG.info("wuchunghsuan: Add path -> " + path.toString());
       }
       else{
         LOG.info("wuchunghsuan: Path is null.");
@@ -467,9 +466,6 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       mapLocations.put(hostName, host);
     }
     host.addKnownMap(mapId);
-
-    LOG.info("wuchunghsuan: addKnownMapOutput HostName -> "
-        + hostName + " hostUrl -> " + hostUrl + " mapId -> " + mapId);
 
     // Mark the host as pending
     if (host.getState() == State.PENDING) {

@@ -127,8 +127,6 @@ public class EventFetcher<K,V> extends Thread {
       LOG.debug("Got " + events.length + " map completion events from " +
                fromEventIdx);
 
-      LOG.info("wuchunghsuan: Got " + events.length + " map completion events from " + fromEventIdx);
-
       assert !update.shouldReset() : "Unexpected legacy state";
 
       // Update the last seen event ID

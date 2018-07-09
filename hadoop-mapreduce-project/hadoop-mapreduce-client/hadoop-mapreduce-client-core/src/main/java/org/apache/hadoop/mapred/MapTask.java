@@ -29,9 +29,12 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+
+import javax.crypto.SecretKey;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,6 +45,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -364,94 +368,132 @@ public class MapTask extends Task {
       return;
     }
     // Try to regist fetcher.
-    int fetcherId = umbilical.registFetcher((org.apache.hadoop.mapred.TaskAttemptID)getTaskID());
-    LOG.info("wuchunghsuan: fetcherId -> " + fetcherId);
-    if (fetcherId == -1) {
+    int[] fetcherIds = umbilical.registFetcher((org.apache.hadoop.mapred.TaskAttemptID)getTaskID());
+    LOG.info("wuchunghsuan: fetcherIds : " + Arrays.toString(fetcherIds));
+    if (fetcherIds[0] == -1) {
       // Already have fetcher on this host.
       done(umbilical, reporter);
       return;
     }
 
-    // Scheduler
-    ShuffleSchedulerImpl<Object, Object> scheduler = new ShuffleSchedulerImpl<Object, Object>(job, taskStatus, getTaskID(),
-        copyPhase, 
-        getCounters().findCounter(TaskCounter.SHUFFLED_MAPS),
-        getCounters().findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES), 
-        getCounters().findCounter(FileOutputFormatCounter.BYTES_WRITTEN));
-    scheduler.setPreFetcherId(fetcherId);
-
-    // ExceptionReporter
-    ExceptionReporterImp exceptionReporter =  new ExceptionReporterImp(scheduler);
-
-    // EventFetcher
-    EventFetcher<Object, Object> eventFetcher = new EventFetcher<Object, Object>(
-        getTaskID(), umbilical, scheduler, exceptionReporter, 1000);
-    eventFetcher.start();
-
-    // Merger
-    CompressionCodec codec = initCodec();
-    CombineOutputCollector combineCollector = 
-        (null != conf.getCombinerClass()) ? 
-        new CombineOutputCollector(reduceCombineOutputCounter, reporter, conf) : null;
-
-    MergeManager<Object, Object> merger = new MergeManagerImpl<Object, Object>(getTaskID(), job, FileSystem.getLocal(job),
-        super.lDirAlloc, reporter, codec,
-        conf.getCombinerClass(), combineCollector, 
-        spilledRecordsCounter,
-        getCounters().findCounter(TaskCounter.COMBINE_INPUT_RECORDS),
-        mergedMapOutputsCounter, exceptionReporter, copyPhase,
-        getMapOutputFile());
-
-    // Fetcher
-    int numFetchers = 5;
-    Fetcher<Object, Object>[] fetchers = new Fetcher[numFetchers];
-    ShuffleClientMetrics metrics = new ShuffleClientMetrics(getTaskID(), job);
-    for(int i = 0; i < numFetchers; i++) {
-      fetchers[i] = new Fetcher<Object, Object>(job, getTaskID(), scheduler, merger, 
-                                      reporter, metrics, exceptionReporter, 
-                                      this.getShuffleSecret());
-      fetchers[i].start();
+    Prefetcher[] prefetchers = new Prefetcher[fetcherIds.length];
+    for(int i = 0; i < prefetchers.length; i++) {
+      prefetchers[i] = new Prefetcher(job, fetcherIds[i], reporter, super.lDirAlloc, this.getShuffleSecret(), umbilical);
+      prefetchers[i].start();
     }
-    
-    int preFetchPathsIndex = 0;
-
-    while (!scheduler.waitUntilDone(2000)) {
-      reporter.progress();
-      LOG.info("wuchunghsuan: wait scheduler done.");
-      int endIndex = scheduler.getPreFetchPaths().size();
-      if(preFetchPathsIndex < endIndex) {
-        LOG.info("wuchunghsuan: sendPreFetchPath from " + preFetchPathsIndex + " to " + endIndex);
-        List<CompressAwarePath> paths = scheduler.getPreFetchPaths().subList(preFetchPathsIndex, endIndex);
-        sendPreFetchPath(umbilical, paths);
-        preFetchPathsIndex = endIndex;
-      }
+    // wait untill down.
+    for(int i = 0; i < prefetchers.length; i++) {
+      prefetchers[i].join();
     }
-
-    // Stop the event-fetcher thread
-    eventFetcher.shutDown();
-    
-    // Stop the map-output fetcher threads
-    for (Fetcher<Object, Object> fetcher : fetchers) {
-      fetcher.shutDown();
-    }
-    
-    // stop the scheduler
-    scheduler.close();
 
     copyPhase.complete(); // copy is already complete
     statusUpdate(umbilical);
 
-    // send preFetchPath to Job.
-    int endIndex = scheduler.getPreFetchPaths().size();
-    if(preFetchPathsIndex < endIndex) {
-      List<CompressAwarePath> paths = scheduler.getPreFetchPaths().subList(preFetchPathsIndex, endIndex);
-      sendPreFetchPath(umbilical, paths);
-      preFetchPathsIndex = endIndex;
-    }
-    LOG.info("wuchunghsuan: final sendPreFetchPath. preFetchPathsIndex = " + preFetchPathsIndex);
-
     // Map Task done.
     done(umbilical, reporter);
+  }
+
+  class Prefetcher extends Thread {
+    private final JobConf job;
+    private final TaskUmbilicalProtocol umbilical;
+    private int fetcherId;
+    private TaskReporter reporter;
+    private LocalDirAllocator lDirAlloc;
+    private SecretKey shuffleSecret;
+    
+
+    public Prefetcher(JobConf jobConf, int id, TaskReporter rep, 
+        LocalDirAllocator allocator, SecretKey secret, TaskUmbilicalProtocol umb) {
+      this.job = jobConf;
+      this.umbilical = umb;
+      this.fetcherId = id;
+      this.reporter = rep;
+      this.lDirAlloc = allocator;
+      this.shuffleSecret = secret;
+    }
+
+    @Override
+    public void run() {
+      try {
+        // Scheduler
+        ShuffleSchedulerImpl<Object, Object> scheduler = new ShuffleSchedulerImpl<Object, Object>(job, taskStatus, getTaskID(),
+        copyPhase, 
+        getCounters().findCounter(TaskCounter.SHUFFLED_MAPS),
+        getCounters().findCounter(TaskCounter.REDUCE_SHUFFLE_BYTES), 
+        getCounters().findCounter(FileOutputFormatCounter.BYTES_WRITTEN));
+        scheduler.setPreFetcherId(fetcherId);
+
+        // ExceptionReporter
+        ExceptionReporterImp exceptionReporter =  new ExceptionReporterImp(scheduler);
+
+        // EventFetcher
+        EventFetcher<Object, Object> eventFetcher = new EventFetcher<Object, Object>(
+            getTaskID(), this.umbilical, scheduler, exceptionReporter, 1000);
+        eventFetcher.start();
+
+        // Merger
+        CompressionCodec codec = initCodec();
+        CombineOutputCollector combineCollector = 
+            (null != conf.getCombinerClass()) ? 
+            new CombineOutputCollector(reduceCombineOutputCounter, reporter, conf) : null;
+
+        MergeManager<Object, Object> merger = new MergeManagerImpl<Object, Object>(getTaskID(), job, FileSystem.getLocal(job),
+            lDirAlloc, reporter, codec,
+            conf.getCombinerClass(), combineCollector, 
+            spilledRecordsCounter,
+            getCounters().findCounter(TaskCounter.COMBINE_INPUT_RECORDS),
+            mergedMapOutputsCounter, exceptionReporter, copyPhase,
+            getMapOutputFile());
+        merger.setFetcherId(fetcherId);
+
+        // Fetcher
+        int numFetchers = 10;
+        Fetcher<Object, Object>[] fetchers = new Fetcher[numFetchers];
+        ShuffleClientMetrics metrics = new ShuffleClientMetrics(getTaskID(), job);
+        for(int i = 0; i < numFetchers; i++) {
+          fetchers[i] = new Fetcher<Object, Object>(job, getTaskID(), scheduler, merger, 
+                                          reporter, metrics, exceptionReporter, 
+                                          shuffleSecret);
+          fetchers[i].start();
+        }
+
+        int preFetchPathsIndex = 0;
+
+        while (!scheduler.waitUntilDone(2000)) {
+          reporter.progress();
+          LOG.info("wuchunghsuan: wait scheduler done.");
+          int endIndex = scheduler.getPreFetchPaths().size();
+          if(preFetchPathsIndex < endIndex) {
+            LOG.info("wuchunghsuan: Id: " + this.fetcherId + " sendPreFetchPath from " + preFetchPathsIndex + " to " + endIndex);
+            List<CompressAwarePath> paths = scheduler.getPreFetchPaths().subList(preFetchPathsIndex, endIndex);
+            sendPreFetchPath(this.umbilical, paths, this.fetcherId);
+            preFetchPathsIndex = endIndex;
+          }
+        }
+
+        // Stop the event-fetcher thread
+        eventFetcher.shutDown();
+
+        // Stop the map-output fetcher threads
+        for (Fetcher<Object, Object> fetcher : fetchers) {
+          fetcher.shutDown();
+        }
+
+        // stop the scheduler
+        scheduler.close();
+
+        // send preFetchPath to Job.
+        int endIndex = scheduler.getPreFetchPaths().size();
+        if(preFetchPathsIndex < endIndex) {
+          List<CompressAwarePath> paths = scheduler.getPreFetchPaths().subList(preFetchPathsIndex, endIndex);
+          sendPreFetchPath(this.umbilical, paths, this.fetcherId);
+          preFetchPathsIndex = endIndex;
+        }
+        LOG.info("wuchunghsuan: final sendPreFetchPath. Id: " + this.fetcherId + " preFetchPathsIndex = " + preFetchPathsIndex);
+      } catch (Exception e) {
+        LOG.error("wuchunghsuan: ERROR " + e.toString());
+      }
+    }
   }
 
   class ExceptionReporterImp implements ExceptionReporter {
@@ -478,7 +520,7 @@ public class MapTask extends Task {
 
   
 
-  public void sendPreFetchPath(TaskUmbilicalProtocol umbilical, List<CompressAwarePath> paths) 
+  public void sendPreFetchPath(TaskUmbilicalProtocol umbilical, List<CompressAwarePath> paths, int fetcherId) 
       throws IOException {
     int retries = 10;
     while (true) {
@@ -491,8 +533,7 @@ public class MapTask extends Task {
           lengths[i] = paths.get(i).getRawDataLength();
           sizes[i] = paths.get(i).getCompressedSize();
         }
-        umbilical.sendPreFetchPath(getTaskID(), pathArray, lengths, sizes);
-        LOG.info("wuchunghsuan: Task '" + getTaskID() + "' sendPreFetchPath.");
+        umbilical.sendPreFetchPath(getTaskID(), pathArray, lengths, sizes, fetcherId);
         return;
       } catch (IOException ie) {
         LOG.warn("Failure signalling completion: " + 

@@ -685,7 +685,7 @@ public class LocalJobRunner implements ClientProtocol {
       // Do Nothing.
     }
 
-    public void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException {
+    public void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes, int fetcherId) throws IOException {
       // Do Nothing.
     }
 
@@ -713,8 +713,8 @@ public class LocalJobRunner implements ClientProtocol {
         org.apache.hadoop.mapred.TaskCompletionEvent.EMPTY_ARRAY, false);
     }
     
-    public int registFetcher(TaskAttemptID taskAttemptID) {
-      return -1;
+    public int[] registFetcher(TaskAttemptID taskAttemptID) {
+      return new int[]{-1};
     }
   }
 

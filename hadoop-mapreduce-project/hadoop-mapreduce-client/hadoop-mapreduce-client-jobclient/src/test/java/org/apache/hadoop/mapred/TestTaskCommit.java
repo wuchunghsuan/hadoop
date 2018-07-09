@@ -118,7 +118,7 @@ public class TestTaskCommit extends HadoopTestCase {
       // taskDone = true;
     }
 
-    public void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes) throws IOException {
+    public void sendPreFetchPath(TaskAttemptID taskAttemptID, String[] paths, long[] rawDataLengths, long[] compressSizes, int fetcherId) throws IOException {
 
     }
 
@@ -141,8 +141,8 @@ public class TestTaskCommit extends HadoopTestCase {
     }
 
     @Override
-    public int registFetcher(TaskAttemptID taskAttemptID) {
-      return -1;
+    public int[] registFetcher(TaskAttemptID taskAttemptID) {
+      return new int[]{-1};
     }
 
     @Override
