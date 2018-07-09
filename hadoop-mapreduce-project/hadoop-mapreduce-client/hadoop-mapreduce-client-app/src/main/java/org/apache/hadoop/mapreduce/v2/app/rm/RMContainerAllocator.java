@@ -590,6 +590,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     if (!getIsReduceStarted()) {//not set yet
       int completedMapsForReduceSlowstart = (int)Math.ceil(reduceSlowStart * 
                       totalMaps);
+      // int completedMapsForReduceSlowstart = totalMaps - 4; // For wu-scache
       if(completedMaps < completedMapsForReduceSlowstart) {
         LOG.info("Reduce slow start threshold not met. " +
               "completedMapsForReduceSlowstart " + 
@@ -683,6 +684,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     for (ContainerRequest req : pendingReduces) {
       scheduledRequests.addReduce(req);
     }
+    scheduledRequests.distributeReduce(this.numClusterNodes);
     pendingReduces.clear();
   }
   
@@ -964,6 +966,10 @@ public class RMContainerAllocator extends RMContainerRequestor
     @VisibleForTesting
     final LinkedHashMap<TaskAttemptId, ContainerRequest> reduces =
       new LinkedHashMap<TaskAttemptId, ContainerRequest>();
+
+    List<List<ContainerRequest>> reduceSlots = new ArrayList<List<ContainerRequest>>();
+
+    Map<String, Integer> hostMap = new HashMap<>();
     
     boolean remove(TaskAttemptId tId) {
       ContainerRequest req = null;
@@ -1035,6 +1041,21 @@ public class RMContainerAllocator extends RMContainerRequestor
     void addReduce(ContainerRequest req) {
       reduces.put(req.attemptID, req);
       addContainerReq(req);
+    }
+
+    // For wu-scache
+    void distributeReduce(int nodeNum) {
+      this.reduceSlots.clear();
+      LOG.info("wuchunghsuan: distributeReduce reduces size: " + reduces.size() + " nodeNum: " + nodeNum);
+      for(int i = 0; i < nodeNum; i++) {
+        this.reduceSlots.add(new LinkedList<ContainerRequest>());
+      }
+      int i = 0;
+      for(ContainerRequest req : reduces.values()) {
+        this.reduceSlots.get(i % nodeNum).add(req);
+        i++;
+      }
+      LOG.info("wuchunghsuan: distributeReduce reduceSlots size: " + this.reduceSlots.size());
     }
     
     // this method will change the list of allocatedContainers.
@@ -1187,18 +1208,62 @@ public class RMContainerAllocator extends RMContainerRequestor
       return assigned;
     }
         
-    private void assignContainers(List<Container> allocatedContainers) {
-      Iterator<Container> it = allocatedContainers.iterator();
-      while (it.hasNext()) {
-        Container allocated = it.next();
-        ContainerRequest assigned = assignWithoutLocality(allocated);
-        if (assigned != null) {
-          containerAssigned(allocated, assigned);
-          it.remove();
-        }
+    private void reSendContainerReq() {
+      Set<TaskAttemptId> keys = this.reduces.keySet();
+      for(TaskAttemptId key : keys) {
+        addContainerReq(this.reduces.get(key));
       }
+      LOG.info("wuchunghsuan: assignContainersEqually reSendContainerReq size: " + keys.size());
+    }
+
+    private void assignContainers(List<Container> allocatedContainers) {
+      // Iterator<Container> it = allocatedContainers.iterator();
+      // while (it.hasNext()) {
+      //   Container allocated = it.next();
+      //   ContainerRequest assigned = assignWithoutLocality(allocated);
+      //   if (assigned != null) {
+      //     containerAssigned(allocated, assigned);
+      //     it.remove();
+      //   }
+      // }
+      LOG.info("wuchunghsuan: assignContainersEqually allocatedContainers begin size: " + allocatedContainers.size());
+      assignContainersEqually(allocatedContainers);
+      LOG.info("wuchunghsuan: assignContainersEqually allocatedContainers end size: " + allocatedContainers.size());
 
       assignMapsWithLocality(allocatedContainers);
+    }
+
+    private void assignContainersEqually(List<Container> allocatedContainers) {
+      Iterator<Container> it = allocatedContainers.iterator();
+      boolean isResend = false;
+      while (it.hasNext()) {
+        Container container = it.next();
+        if(!PRIORITY_REDUCE.equals(container.getPriority())) {
+          continue;
+        }
+
+        String host = container.getNodeId().getHost();
+        if(!this.hostMap.containsKey(host)) {
+          this.hostMap.put(host, this.hostMap.size());
+          LOG.info("wuchunghsuan: assignContainersEqually hostMap put. Host: " + host + " index: " + (this.hostMap.size() - 1));
+        }
+        int index = this.hostMap.get(host);
+        if(this.reduceSlots.get(index).size() == 0) {
+          LOG.info("wuchunghsuan: assignContainersEqually No more reduce task on this host, reSendContainerReq. Host: " + host);
+          isResend = true;
+          continue;
+        }
+        ContainerRequest req = this.reduceSlots.get(index).remove(0);
+        containerAssigned(container, req);
+        this.reduces.remove(req.attemptID);
+
+        it.remove();
+      }
+
+      if(isResend) {
+        reSendContainerReq();
+      }
+      LOG.info("wuchunghsuan: assignContainersEqually rest container size: " + allocatedContainers.size());
     }
     
     private ContainerRequest getContainerReqToReplace(Container allocated) {

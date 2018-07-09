@@ -389,7 +389,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   protected Resource getAvailableResources() {
     return availableResources == null ? Resources.none() : availableResources;
   }
-  
+
   protected void addContainerReq(ContainerRequest req) {
     // Create resource requests
     for (String host : req.hosts) {
