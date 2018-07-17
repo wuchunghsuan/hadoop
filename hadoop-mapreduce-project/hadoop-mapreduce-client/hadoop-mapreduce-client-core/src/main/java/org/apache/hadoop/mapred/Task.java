@@ -1184,7 +1184,7 @@ abstract public class Task implements Writable, Configurable {
     while (true) {
       try {
         umbilical.preDone(getTaskID());
-        LOG.info("wuchunghsuan: Task '" + taskId + "' preDone.");
+        // LOG.info("wuchunghsuan: Task '" + taskId + "' preDone.");
         return;
       } catch (IOException ie) {
         LOG.warn("Failure signalling completion: " + 

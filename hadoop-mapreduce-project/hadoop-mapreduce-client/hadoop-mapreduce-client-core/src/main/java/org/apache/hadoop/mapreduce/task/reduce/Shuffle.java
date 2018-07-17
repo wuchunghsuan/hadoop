@@ -165,6 +165,10 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     while(startIndex < totalMapNum) {
       startIndex += commitOnDiskMapOutput(merger, startIndex);
       LOG.info("wuchunghsuan: wait for merging. startIndex = " + startIndex);
+      if(checkLast()) {
+        LOG.info("wuchunghsuan: checkLast, do final merge. startIndex = " + startIndex);
+        break;
+      }
       Thread.sleep(2000);
     }
 
@@ -208,6 +212,10 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     catch (IOException e){
       return 0;
     }
+  }
+
+  private boolean checkLast() {
+    return umbilical.checkLast((org.apache.hadoop.mapred.TaskAttemptID)reduceId);
   }
 
   @Override

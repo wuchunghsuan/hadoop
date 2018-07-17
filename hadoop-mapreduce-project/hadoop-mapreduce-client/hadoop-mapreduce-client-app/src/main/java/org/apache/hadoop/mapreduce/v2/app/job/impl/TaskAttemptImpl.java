@@ -1743,7 +1743,7 @@ public abstract class TaskAttemptImpl implements
       // taskAttempt.eventHandler.handle(
       //     createJobCounterUpdateEventTASucceeded(taskAttempt));
       // taskAttempt.logAttemptFinishedEvent(TaskAttemptStateInternal.SUCCEEDED);
-      LOG.info("wuchunghsuan: preSucceeded transition in taskAttempt.");
+      // LOG.info("wuchunghsuan: preSucceeded transition in taskAttempt.");
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId,
           TaskEventType.T_ATTEMPT_PRESUCCEEDED));

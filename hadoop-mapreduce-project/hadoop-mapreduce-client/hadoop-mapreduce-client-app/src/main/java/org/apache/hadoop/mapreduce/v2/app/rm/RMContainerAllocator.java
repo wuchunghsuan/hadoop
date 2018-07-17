@@ -728,7 +728,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       if(this.numClusterNodes != response.getNumClusterNodes()) {
         this.numClusterNodes = response.getNumClusterNodes();
         this.getJob().setNumClusterNodes(this.numClusterNodes);
-        LOG.info("wuchunghsuan: getNumClusterNodes -> " + response.getNumClusterNodes());
+        // LOG.info("wuchunghsuan: getNumClusterNodes -> " + response.getNumClusterNodes());
       }
 
       // Reset retry count if no exception occurred.
@@ -1046,7 +1046,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     // For wu-scache
     void distributeReduce(int nodeNum) {
       this.reduceSlots.clear();
-      LOG.info("wuchunghsuan: distributeReduce reduces size: " + reduces.size() + " nodeNum: " + nodeNum);
+      // LOG.info("wuchunghsuan: distributeReduce reduces size: " + reduces.size() + " nodeNum: " + nodeNum);
       for(int i = 0; i < nodeNum; i++) {
         this.reduceSlots.add(new LinkedList<ContainerRequest>());
       }
@@ -1055,7 +1055,7 @@ public class RMContainerAllocator extends RMContainerRequestor
         this.reduceSlots.get(i % nodeNum).add(req);
         i++;
       }
-      LOG.info("wuchunghsuan: distributeReduce reduceSlots size: " + this.reduceSlots.size());
+      // LOG.info("wuchunghsuan: distributeReduce reduceSlots size: " + this.reduceSlots.size());
     }
     
     // this method will change the list of allocatedContainers.
@@ -1213,7 +1213,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       for(TaskAttemptId key : keys) {
         addContainerReq(this.reduces.get(key));
       }
-      LOG.info("wuchunghsuan: assignContainersEqually reSendContainerReq size: " + keys.size());
+      // LOG.info("wuchunghsuan: assignContainersEqually reSendContainerReq size: " + keys.size());
     }
 
     private void assignContainers(List<Container> allocatedContainers) {
@@ -1226,9 +1226,9 @@ public class RMContainerAllocator extends RMContainerRequestor
       //     it.remove();
       //   }
       // }
-      LOG.info("wuchunghsuan: assignContainersEqually allocatedContainers begin size: " + allocatedContainers.size());
+      // LOG.info("wuchunghsuan: assignContainersEqually allocatedContainers begin size: " + allocatedContainers.size());
       assignContainersEqually(allocatedContainers);
-      LOG.info("wuchunghsuan: assignContainersEqually allocatedContainers end size: " + allocatedContainers.size());
+      // LOG.info("wuchunghsuan: assignContainersEqually allocatedContainers end size: " + allocatedContainers.size());
 
       assignMapsWithLocality(allocatedContainers);
     }
@@ -1238,18 +1238,19 @@ public class RMContainerAllocator extends RMContainerRequestor
       boolean isResend = false;
       while (it.hasNext()) {
         Container container = it.next();
-        if(!PRIORITY_REDUCE.equals(container.getPriority())) {
+        if(!PRIORITY_REDUCE.equals(container.getPriority()) ||
+            this.reduceSlots.size() == 0) {
           continue;
         }
 
         String host = container.getNodeId().getHost();
         if(!this.hostMap.containsKey(host)) {
           this.hostMap.put(host, this.hostMap.size());
-          LOG.info("wuchunghsuan: assignContainersEqually hostMap put. Host: " + host + " index: " + (this.hostMap.size() - 1));
+          // LOG.info("wuchunghsuan: assignContainersEqually hostMap put. Host: " + host + " index: " + (this.hostMap.size() - 1));
         }
         int index = this.hostMap.get(host);
         if(this.reduceSlots.get(index).size() == 0) {
-          LOG.info("wuchunghsuan: assignContainersEqually No more reduce task on this host, reSendContainerReq. Host: " + host);
+          // LOG.info("wuchunghsuan: assignContainersEqually No more reduce task on this host, reSendContainerReq. Host: " + host);
           isResend = true;
           continue;
         }
@@ -1263,7 +1264,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       if(isResend) {
         reSendContainerReq();
       }
-      LOG.info("wuchunghsuan: assignContainersEqually rest container size: " + allocatedContainers.size());
+      // LOG.info("wuchunghsuan: assignContainersEqually rest container size: " + allocatedContainers.size());
     }
     
     private ContainerRequest getContainerReqToReplace(Container allocated) {

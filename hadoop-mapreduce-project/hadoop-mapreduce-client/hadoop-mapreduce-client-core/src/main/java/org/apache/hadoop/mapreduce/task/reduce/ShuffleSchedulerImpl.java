@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.Date;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
@@ -565,6 +566,8 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       wait(millis);
       return remainingMaps == 0;
     }
+    Date date = new Date();
+    LOG.info("wuchunghsuan: scheduler done. date: " + date.toString());
     return true;
   }
 

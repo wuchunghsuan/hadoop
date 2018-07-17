@@ -693,6 +693,10 @@ public class LocalJobRunner implements ClientProtocol {
       return null;
     }
 
+    public boolean checkLast(TaskAttemptID taskAttemptID) {
+      return false;
+    }
+
     public synchronized void fsError(TaskAttemptID taskId, String message) 
     throws IOException {
       LOG.fatal("FSError: "+ message + "from task: " + taskId);

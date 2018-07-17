@@ -97,6 +97,10 @@ public class TestMapProgress extends TestCase {
     public String[] getCAPaths(TaskAttemptID taskAttemptID, int startIndex) throws IOException {
       return null;
     }
+    
+    public boolean checkLast(TaskAttemptID taskAttemptID) {
+      return false;
+    }
 
     public void fsError(TaskAttemptID taskId, String message) throws IOException {
       LOG.info("Task " + taskId + " reporting file system error: " + message);

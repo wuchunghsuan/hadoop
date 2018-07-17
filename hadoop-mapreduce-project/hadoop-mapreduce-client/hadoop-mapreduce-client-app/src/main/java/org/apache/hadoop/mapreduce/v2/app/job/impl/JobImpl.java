@@ -758,8 +758,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           ArrayList<CompressAwarePath> paths = counter.pathsList.get(index);
           if (paths.size() > startIndex) {
             ArrayList<CompressAwarePath> ret = new ArrayList<CompressAwarePath>(paths.subList(startIndex, paths.size()));
-            LOG.info("wuchunghsuan: getPreFetchPaths from " + startIndex + " to " + paths.size()
-                + ". Host -> " + host + " ReduceID -> " + reduceId + " Path: " + ret);
+            // LOG.info("wuchunghsuan: getPreFetchPaths from " + startIndex + " to " + paths.size()
+                // + ". Host -> " + host + " ReduceID -> " + reduceId + " Path: " + ret);
             return ret;
           }
           return new ArrayList<CompressAwarePath>();
@@ -781,15 +781,15 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           if(!counter.fetcherIdMap.containsKey(fetcherId)) {
             counter.fetcherIdMap.put(fetcherId, counter.pathsList.size());
             counter.pathsList.add(addPaths);
-            LOG.info("wuchunghsuan: addPreFetchPaths size: " + addPaths.size()
-                + " host: " + host + " mapId: " + mapId + "fetcherId: " + fetcherId +  " paths: " + addPaths);
+            // LOG.info("wuchunghsuan: addPreFetchPaths size: " + addPaths.size()
+            //     + " host: " + host + " mapId: " + mapId + "fetcherId: " + fetcherId +  " paths: " + addPaths);
             return;
           }
           int index = counter.fetcherIdMap.get(fetcherId);
           ArrayList<CompressAwarePath> paths = counter.pathsList.get(index);
           paths.addAll(addPaths);
-          LOG.info("wuchunghsuan: addPreFetchPaths size: " + addPaths.size()
-              + " host: " + host + " mapId: " + mapId + "fetcherId: " + fetcherId +  " paths: " + addPaths);
+          // LOG.info("wuchunghsuan: addPreFetchPaths size: " + addPaths.size()
+          //     + " host: " + host + " mapId: " + mapId + "fetcherId: " + fetcherId +  " paths: " + addPaths);
           return;
         }
       }
@@ -1326,7 +1326,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       test += counter.numFetchers;
       test += " | ";
     }
-    LOG.info("wuchunghsuan: preFetcherList -> " + test);
+    // LOG.info("wuchunghsuan: preFetcherList -> " + test);
   }
   
   /*
@@ -2012,7 +2012,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         // we track map completions separately from task completions because
         // - getMapAttemptCompletionEvents uses index ranges specific to maps
         // - type converting the same events over and over is expensive
-        LOG.info("wuchunghsuan: Add mapAttemptPreDoneEvents successfully.");
+        // LOG.info("wuchunghsuan: Add mapAttemptPreDoneEvents successfully.");
         job.mapAttemptPreDoneEvents.add(TypeConverter.fromYarn(tce));
         // job.mapAttemptCompletionEvents.add(TypeConverter.fromYarn(tce));
       }

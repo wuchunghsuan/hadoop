@@ -447,7 +447,7 @@ public class MapTask extends Task {
         merger.setFetcherId(fetcherId);
 
         // Fetcher
-        int numFetchers = 10;
+        int numFetchers = 50;
         Fetcher<Object, Object>[] fetchers = new Fetcher[numFetchers];
         ShuffleClientMetrics metrics = new ShuffleClientMetrics(getTaskID(), job);
         for(int i = 0; i < numFetchers; i++) {
@@ -461,10 +461,10 @@ public class MapTask extends Task {
 
         while (!scheduler.waitUntilDone(2000)) {
           reporter.progress();
-          LOG.info("wuchunghsuan: wait scheduler done.");
+          // LOG.info("wuchunghsuan: wait scheduler done.");
           int endIndex = scheduler.getPreFetchPaths().size();
           if(preFetchPathsIndex < endIndex) {
-            LOG.info("wuchunghsuan: Id: " + this.fetcherId + " sendPreFetchPath from " + preFetchPathsIndex + " to " + endIndex);
+            // LOG.info("wuchunghsuan: Id: " + this.fetcherId + " sendPreFetchPath from " + preFetchPathsIndex + " to " + endIndex);
             List<CompressAwarePath> paths = scheduler.getPreFetchPaths().subList(preFetchPathsIndex, endIndex);
             sendPreFetchPath(this.umbilical, paths, this.fetcherId);
             preFetchPathsIndex = endIndex;
@@ -489,7 +489,7 @@ public class MapTask extends Task {
           sendPreFetchPath(this.umbilical, paths, this.fetcherId);
           preFetchPathsIndex = endIndex;
         }
-        LOG.info("wuchunghsuan: final sendPreFetchPath. Id: " + this.fetcherId + " preFetchPathsIndex = " + preFetchPathsIndex);
+        // LOG.info("wuchunghsuan: final sendPreFetchPath. Id: " + this.fetcherId + " preFetchPathsIndex = " + preFetchPathsIndex);
       } catch (Exception e) {
         LOG.error("wuchunghsuan: ERROR " + e.toString());
       }

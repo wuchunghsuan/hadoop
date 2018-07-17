@@ -126,6 +126,10 @@ public class TestTaskCommit extends HadoopTestCase {
       return null;
     }
 
+    public boolean checkLast(TaskAttemptID taskAttemptID) {
+      return false;
+    }
+
     @Override
     public void fatalError(TaskAttemptID taskId, String message)
         throws IOException { }

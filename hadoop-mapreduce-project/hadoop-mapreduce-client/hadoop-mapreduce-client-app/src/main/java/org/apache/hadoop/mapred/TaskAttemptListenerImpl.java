@@ -249,14 +249,14 @@ public class TaskAttemptListenerImpl extends CompositeService
 
   @Override
   public void preDone(TaskAttemptID taskAttemptID) throws IOException {
-    LOG.info("Done acknowledgement from " + taskAttemptID.toString());
+    // LOG.info("Done acknowledgement from " + taskAttemptID.toString());
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
         TypeConverter.toYarn(taskAttemptID);
 
     taskHeartbeatHandler.progressing(attemptID);
 
-    LOG.info("wuchunghsuan: handle PreDone TaskAttemptEvent.");
+    // LOG.info("wuchunghsuan: handle PreDone TaskAttemptEvent.");
 
     context.getEventHandler().handle(
         new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_PREDONE));
@@ -284,7 +284,7 @@ public class TaskAttemptListenerImpl extends CompositeService
         .getNodeId();
     context.getJob(attemptID.getTaskId().getJobId())
         .addPreFetchPaths(nodeId.toString(), attemptID.toString(), pathList, fetcherId);
-    LOG.info("wuchunghsuan: sendPreFetchPath. Node: " + nodeId.toString() + " ID: " + fetcherId);
+    // LOG.info("wuchunghsuan: sendPreFetchPath. Node: " + nodeId.toString() + " ID: " + fetcherId);
   }
 
   @Override
@@ -348,7 +348,7 @@ public class TaskAttemptListenerImpl extends CompositeService
 
   @Override
   public int[] registFetcher(TaskAttemptID taskAttemptID) {
-    LOG.info("wuchunghsuan: registFetcher request from " + taskAttemptID.toString());
+    // LOG.info("wuchunghsuan: registFetcher request from " + taskAttemptID.toString());
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
       TypeConverter.toYarn(taskAttemptID);
     NodeId nodeId = context.getJob(attemptID.getTaskId().getJobId())
@@ -372,8 +372,22 @@ public class TaskAttemptListenerImpl extends CompositeService
     for(int i = 0; i < paths.size(); i++) {
       ret[i] = paths.get(i).toString() + ":" + paths.get(i).getRawDataLength() + ":" + paths.get(i).getCompressedSize();
     }
-    LOG.info("wuchunghsuan: get CAPaths size -> " + ret.length + " by Node -> " + nodeId.toString());
+    // LOG.info("wuchunghsuan: get CAPaths size -> " + ret.length + " by Node -> " + nodeId.toString());
     return ret;
+  }
+
+  @Override
+  public boolean checkLast(TaskAttemptID taskAttemptID) {
+    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
+    TypeConverter.toYarn(taskAttemptID);
+    int totalReduces = context.getJob(attemptID.getTaskId().getJobId()).getTotalReduces();
+    int totalMaps = context.getJob(attemptID.getTaskId().getJobId()).getTotalMaps();
+    int completedReduces = context.getJob(attemptID.getTaskId().getJobId()).getCompletedReduces();
+    int completedMaps = context.getJob(attemptID.getTaskId().getJobId()).getCompletedMaps();
+    if(totalMaps == completedMaps && totalReduces - completedReduces == 1) {
+      return true;
+    }
+    return false;
   }
 
   @Override

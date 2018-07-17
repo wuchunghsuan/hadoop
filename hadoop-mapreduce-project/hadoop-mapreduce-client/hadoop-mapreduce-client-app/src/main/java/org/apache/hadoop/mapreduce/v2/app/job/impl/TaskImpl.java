@@ -726,7 +726,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         runTime = (int)(attempt.getFinishTime() - attempt.getLaunchTime());
       tce.setAttemptRunTime(runTime);
 
-      LOG.info("wuchunghsuan: handleTaskAttemptPreDone.");
+      // LOG.info("wuchunghsuan: handleTaskAttemptPreDone.");
       eventHandler.handle(new JobTaskAttemptPreDoneEvent(tce));
     }
   }
