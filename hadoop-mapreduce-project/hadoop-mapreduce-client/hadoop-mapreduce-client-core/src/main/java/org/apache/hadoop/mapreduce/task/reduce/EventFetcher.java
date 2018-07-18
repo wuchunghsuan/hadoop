@@ -18,7 +18,6 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.IOException;
-import java.util.Date;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -144,8 +143,6 @@ public class EventFetcher<K,V> extends Thread {
         if (TaskCompletionEvent.Status.SUCCEEDED == event.getTaskStatus()) {
           ++numNewMaps;
         }
-        Date date = new Date();
-        LOG.info("wuchunghsuan: TaskCompletionEvent " + numNewMaps + ". date: " + date.toString());
       }
     } while (events.length == maxEventsToFetch);
 

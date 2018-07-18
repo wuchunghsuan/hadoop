@@ -447,7 +447,7 @@ public class MapTask extends Task {
         merger.setFetcherId(fetcherId);
 
         // Fetcher
-        int numFetchers = 50;
+        int numFetchers = 5;
         Fetcher<Object, Object>[] fetchers = new Fetcher[numFetchers];
         ShuffleClientMetrics metrics = new ShuffleClientMetrics(getTaskID(), job);
         for(int i = 0; i < numFetchers; i++) {

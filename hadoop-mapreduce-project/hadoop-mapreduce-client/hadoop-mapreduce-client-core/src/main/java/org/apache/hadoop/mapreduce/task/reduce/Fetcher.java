@@ -319,13 +319,6 @@ public class Fetcher<K,V> extends Thread {
     DataInputStream input = null;
     
     try {
-      
-      try {
-        Thread.sleep(20000);
-      } catch (Exception e) {
-        //TODO: handle exception
-      }
-      
       input = openShuffleUrl(host, remaining, url);
       if (input == null) {
         return;
@@ -630,7 +623,7 @@ public class Fetcher<K,V> extends Thread {
       return false;
     }
     
-    // Ignore reduceId check.
+    // wu-scache - Ignore reduceId check.
     // if (forReduce != reduce) {
     //   wrongReduceErrs.increment(1);
     //   LOG.warn(getName() + " data for the wrong reduce map: " +
