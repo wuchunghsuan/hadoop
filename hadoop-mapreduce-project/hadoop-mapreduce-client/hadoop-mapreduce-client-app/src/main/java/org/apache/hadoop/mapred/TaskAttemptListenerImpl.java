@@ -384,7 +384,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     int totalMaps = context.getJob(attemptID.getTaskId().getJobId()).getTotalMaps();
     int completedReduces = context.getJob(attemptID.getTaskId().getJobId()).getCompletedReduces();
     int completedMaps = context.getJob(attemptID.getTaskId().getJobId()).getCompletedMaps();
-    if(totalMaps == completedMaps && totalReduces - completedReduces == 1) {
+    if(totalMaps == completedMaps && completedReduces >= totalReduces * 0.95) {
       return true;
     }
     return false;
