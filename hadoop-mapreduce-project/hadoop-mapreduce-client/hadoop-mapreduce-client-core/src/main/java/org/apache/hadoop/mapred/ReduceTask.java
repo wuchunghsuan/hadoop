@@ -320,8 +320,7 @@ public class ReduceTask extends Task {
     throws IOException, InterruptedException, ClassNotFoundException {
     job.setBoolean(JobContext.SKIP_RECORDS, isSkipping());
 
-    LOG.info("[IST]-" + System.currentTimeMillis() + "-" + getTaskID() + "-reduce-" + "start");
-
+    
     if (isMapOrReduce()) {
       copyPhase = getProgress().addPhase("copy");
       sortPhase  = getProgress().addPhase("sort");
@@ -390,6 +389,8 @@ public class ReduceTask extends Task {
     Class keyClass = job.getMapOutputKeyClass();
     Class valueClass = job.getMapOutputValueClass();
     RawComparator comparator = job.getOutputValueGroupingComparator();
+
+    LOG.info("[IST]-" + System.currentTimeMillis() + "-" + getTaskID() + "-reduce-" + "start");
 
     if (useNewApi) {
       runNewReducer(job, umbilical, reporter, rIter, comparator, 
